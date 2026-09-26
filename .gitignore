@@ -1,36 +1,49 @@
-# --- Image Files ---
-# Individual file formats
-*.jpg
-*.jpeg
-*.png
-*.gif
-*.bmp
-*.webp
-*.tiff
-*.svg
-*.ico
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
 
-# RAW camera formats
-*.cr2
-*.cr3
-*.nef
-*.arw
-*.dng
-*.orf
-*.rw2
+# Build output
+bin/
+obj/
 
-# --- Image Directories ---
-# Ignore specific folders if you store images only locally
-images/
-img/
+# Test results
+TestResults/
+*.trx
+
+# ReSharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# NuGet
+packages/
+*.nupkg
+*.snupkg
+
+# Rider
+.idea/
+
+# VS Code
+.vscode/
+
+# Local configuration / secrets
+appsettings.Local.json
+appsettings.Development.json
+*.local.json
+
+# ImageMetaAI - local data
+data/
 photos/
-assets/images/
+models/
 
-# --- Video Formats ---
-*.mp4
-*.mov
-*.avi*.mkv
+# Logs
+logs/
+*.log
 
-# --- Design Tools & Preview Files ---
+# OS files
 .DS_Store
 Thumbs.db
+Desktop.ini

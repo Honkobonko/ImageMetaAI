@@ -95,5 +95,14 @@ public class OllamaServiceTests
         {
             return Task.FromResult(Models);
         }
+
+        public Task<string> GenerateAsync(
+        string model,
+        string prompt,
+        string imageBase64,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(string.Empty);
+        }
     }
 }

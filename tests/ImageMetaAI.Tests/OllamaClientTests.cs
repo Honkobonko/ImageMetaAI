@@ -144,11 +144,102 @@ public class OllamaClientTests
         Assert.Empty(result);
     }
 
+    [Fact]
+    public async Task GenerateAsync_ReturnsContent_WhenResponseIsSuccessful()
+    {
+        const string json = """
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": "{\"description\":\"A mountain landscape\"}"
+                }
+            }
+            """;
+
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.OK,
+            json);
+
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+
+        var client = new OllamaClient(httpClient);
+
+        var result = await client.GenerateAsync(
+            "qwen2.5vl:7b",
+            "Analyze this image.",
+            "base64-image-data");
+
+        Assert.Equal(
+            "{\"description\":\"A mountain landscape\"}",
+            result);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_Throws_WhenResponseIsNotSuccessful()
+    {
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.InternalServerError);
+
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+
+        var client = new OllamaClient(httpClient);
+
+        await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.GenerateAsync(
+                "qwen2.5vl:7b",
+                "Analyze this image.",
+                "base64-image-data"));
+    }
+
+    [Fact]
+    public async Task GenerateAsync_SendsExpectedContextSize()
+    {
+        const string json = """
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": "test"
+                }
+            }
+            """;
+
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.OK,
+            json);
+
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+
+        var client = new OllamaClient(httpClient);
+
+        await client.GenerateAsync(
+            "qwen2.5vl:7b",
+            "Analyze this image.",
+            "base64-image-data");
+
+        Assert.NotNull(handler.LastRequestContent);
+
+        Assert.Contains(
+            "\"num_ctx\":8192",
+            handler.LastRequestContent);
+    }
+
     private sealed class FakeHttpMessageHandler : HttpMessageHandler
     {
         private readonly HttpStatusCode? _statusCode;
         private readonly Exception? _exception;
         private readonly string? _content;
+
+        public HttpRequestMessage? LastRequest { get; private set; }
+        public string? LastRequestContent { get; private set; }
 
         public FakeHttpMessageHandler(HttpStatusCode statusCode)
         {
@@ -168,10 +259,16 @@ public class OllamaClientTests
             _exception = exception;
         }
 
-        protected override Task<HttpResponseMessage> SendAsync(
+        protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
+            LastRequest = request;
+
+            LastRequestContent = request.Content is null
+                ? null
+                : await request.Content.ReadAsStringAsync(cancellationToken);
+                
             if (_exception is not null)
             {
                 throw _exception;
@@ -187,7 +284,7 @@ public class OllamaClientTests
                     "application/json");
             }
 
-            return Task.FromResult(response);
+            return response;
         }
     }
 }

@@ -9,4 +9,10 @@ public interface IOllamaClient
 
     Task<IReadOnlyList<OllamaModel>> GetModelsAsync(
         CancellationToken cancellationToken = default);
+
+    Task<string> GenerateAsync(
+        string model,
+        string prompt,
+        string imageBase64,
+        CancellationToken cancellationToken = default);
 }

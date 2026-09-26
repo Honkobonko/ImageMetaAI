@@ -10,6 +10,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -23,10 +24,16 @@
                     Height="30"
                     Click="SelectFolder_Click"/>
 
+            <Button Content="Analyze Image (Temp)"
+                    Width="130"
+                    Height="30"
+                    Margin="10,0,0,0"
+                    Click="AnalyzeImage_Click"/>
+
             <TextBlock x:Name="FolderPathText"
-                       Margin="15,6,0,0"
-                       VerticalAlignment="Center"
-                       Text="No folder selected"/>
+                    Margin="15,6,0,0"
+                    VerticalAlignment="Center"
+                    Text="No folder selected"/>
 
         </StackPanel>
 
@@ -36,8 +43,15 @@
                    Margin="0,0,0,10"
                    Text="No images loaded"/>
 
+        <!-- Ollama Status -->
+        <TextBlock Grid.Row="2"
+                x:Name="OllamaStatusText"
+                Margin="0,0,0,10"
+                Text="Checking Ollama..."
+                FontWeight="SemiBold"/>
+
         <!-- Main content area -->
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="3">
 
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="300"/>

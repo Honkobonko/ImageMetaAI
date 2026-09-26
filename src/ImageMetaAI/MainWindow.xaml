@@ -1,12 +1,93 @@
 ﻿<Window x:Class="ImageMetaAI.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:ImageMetaAI"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="ImageMetaAI"
+        Height="700"
+        Width="1100">
+
+    <Grid Margin="15">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Folder selection -->
+        <StackPanel Grid.Row="0"
+                    Orientation="Horizontal"
+                    Margin="0,0,0,10">
+
+            <Button Content="Select Folder..."
+                    Width="150"
+                    Height="30"
+                    Click="SelectFolder_Click"/>
+
+            <TextBlock x:Name="FolderPathText"
+                       Margin="15,6,0,0"
+                       VerticalAlignment="Center"
+                       Text="No folder selected"/>
+
+        </StackPanel>
+
+        <!-- Image count -->
+        <TextBlock Grid.Row="1"
+                   x:Name="ImageCountText"
+                   Margin="0,0,0,10"
+                   Text="No images loaded"/>
+
+        <!-- Main content area -->
+        <Grid Grid.Row="2">
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Image list -->
+            <ListBox x:Name="ImageList"
+                     Grid.Column="0"
+                     SelectionChanged="ImageList_SelectionChanged">
+
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+
+                        <Grid Margin="5">
+
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0"
+                                       Text="{Binding FileName}"
+                                       FontWeight="SemiBold"/>
+
+                            <TextBlock Grid.Row="1"
+                                       Text="{Binding Status}"
+                                       FontSize="12"
+                                       Foreground="Gray"/>
+
+                        </Grid>
+
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+
+            </ListBox>
+
+            <!-- Image preview -->
+            <Border Grid.Column="1"
+                    Margin="15,0,0,0"
+                    BorderBrush="Gray"
+                    BorderThickness="1">
+
+                <Image x:Name="ImagePreview"
+                       Stretch="Uniform"/>
+
+            </Border>
+
+        </Grid>
 
     </Grid>
+
 </Window>

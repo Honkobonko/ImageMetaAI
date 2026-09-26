@@ -37,7 +37,6 @@ appsettings.Development.json
 # ImageMetaAI - local data
 data/
 photos/
-models/
 
 # Logs
 logs/

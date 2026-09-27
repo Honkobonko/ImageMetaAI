@@ -141,7 +141,7 @@ public class ImageAnalyzerTests
             return Task.FromResult<IReadOnlyList<OllamaModel>>([]);
         }
 
-        public Task<string> GenerateAsync(
+        public Task<string> GenerateVisionAsync(
             string model,
             string prompt,
             string imageBase64,
@@ -152,6 +152,14 @@ public class ImageAnalyzerTests
             ImageBase64 = imageBase64;
 
             return Task.FromResult(Response);
+        }
+
+        public Task<ImageMetadata> GenerateMetadataAsync(
+            string model,
+            string prompt,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new ImageMetadata());
         }
     }
 }

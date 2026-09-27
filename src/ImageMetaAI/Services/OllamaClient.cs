@@ -1,5 +1,6 @@
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using ImageMetaAI.Models;
 
@@ -46,11 +47,11 @@ public class OllamaClient : IOllamaClient
         return response.Models;
     }
 
-    public async Task<string> GenerateAsync(
-    string model,
-    string prompt,
-    string imageBase64,
-    CancellationToken cancellationToken = default)
+    public async Task<string> GenerateVisionAsync(
+        string model,
+        string prompt,
+        string imageBase64,
+        CancellationToken cancellationToken = default)
     {
         var request = new OllamaChatRequest
         {
@@ -99,6 +100,75 @@ public class OllamaClient : IOllamaClient
         return result.Message.Content;
     }
 
+    public async Task<ImageMetadata> GenerateMetadataAsync(
+        string model,
+        string prompt,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new OllamaChatRequest
+        {
+            Model = model,
+            Stream = false,
+            Options = new OllamaOptions
+            {
+                NumCtx = 8192
+            },
+            Messages =
+            [
+                new OllamaMessage
+                {
+                    Role = "user",
+                    Content = prompt
+                }
+            ]
+        };
+
+        var response = await _httpClient.PostAsJsonAsync(
+            "/api/chat",
+            request,
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync(
+                cancellationToken);
+
+            throw new HttpRequestException(
+                $"Ollama returned {(int)response.StatusCode} " +
+                $"{response.StatusCode}: {errorContent}");
+        }
+
+        var result = await response.Content
+            .ReadFromJsonAsync<OllamaChatResponse>(
+                cancellationToken);
+
+        if (result is null)
+        {
+            throw new InvalidOperationException(
+                "Ollama returned an empty response.");
+        }
+
+        try
+        {
+            var metadata = JsonSerializer.Deserialize<ImageMetadata>(
+                result.Message.Content,
+                new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+            return metadata
+                ?? throw new InvalidOperationException(
+                    "Ollama returned empty metadata.");
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException(
+                "Ollama returned invalid metadata JSON.",
+                ex);
+        }
+    }
+
     private sealed class OllamaModelsResponse
     {
         [JsonPropertyName("models")]
@@ -128,7 +198,8 @@ public class OllamaClient : IOllamaClient
 
         public string Content { get; init; } = string.Empty;
 
-        public List<string> Images { get; init; } = [];
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<string>? Images { get; init; }
     }
 
     private sealed class OllamaChatResponse
@@ -136,3 +207,4 @@ public class OllamaClient : IOllamaClient
         public OllamaMessage Message { get; init; } = new();
     }
 }
+

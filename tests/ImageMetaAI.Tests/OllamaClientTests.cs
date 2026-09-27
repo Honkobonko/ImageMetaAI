@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http;
 using ImageMetaAI.Services;
 
 namespace ImageMetaAI.Tests;
@@ -145,13 +144,13 @@ public class OllamaClientTests
     }
 
     [Fact]
-    public async Task GenerateAsync_ReturnsContent_WhenResponseIsSuccessful()
+    public async Task GenerateVisionAsync_ReturnsContent_WhenResponseIsSuccessful()
     {
         const string json = """
             {
                 "message": {
                     "role": "assistant",
-                    "content": "{\"description\":\"A mountain landscape\"}"
+                    "content": "A mountain landscape."
                 }
             }
             """;
@@ -167,18 +166,18 @@ public class OllamaClientTests
 
         var client = new OllamaClient(httpClient);
 
-        var result = await client.GenerateAsync(
-            "qwen2.5vl:7b",
+        var result = await client.GenerateVisionAsync(
+            "test-vision-model",
             "Analyze this image.",
             "base64-image-data");
 
         Assert.Equal(
-            "{\"description\":\"A mountain landscape\"}",
+            "A mountain landscape.",
             result);
     }
 
     [Fact]
-    public async Task GenerateAsync_Throws_WhenResponseIsNotSuccessful()
+    public async Task GenerateVisionAsync_Throws_WhenResponseIsNotSuccessful()
     {
         var handler = new FakeHttpMessageHandler(
             HttpStatusCode.InternalServerError);
@@ -191,14 +190,14 @@ public class OllamaClientTests
         var client = new OllamaClient(httpClient);
 
         await Assert.ThrowsAsync<HttpRequestException>(
-            () => client.GenerateAsync(
-                "qwen2.5vl:7b",
+            () => client.GenerateVisionAsync(
+                "test-vision-model",
                 "Analyze this image.",
                 "base64-image-data"));
     }
 
     [Fact]
-    public async Task GenerateAsync_SendsExpectedContextSize()
+    public async Task GenerateVisionAsync_SendsExpectedContextSize()
     {
         const string json = """
             {
@@ -220,8 +219,8 @@ public class OllamaClientTests
 
         var client = new OllamaClient(httpClient);
 
-        await client.GenerateAsync(
-            "qwen2.5vl:7b",
+        await client.GenerateVisionAsync(
+            "test-vision-model",
             "Analyze this image.",
             "base64-image-data");
 
@@ -232,6 +231,124 @@ public class OllamaClientTests
             handler.LastRequestContent);
     }
 
+    [Fact]
+    public async Task GenerateMetadataAsync_ReturnsMetadata_WhenResponseIsValid()
+    {
+        const string json = """
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": "{\"title\":\"Freshly baked bread\",\"keywords\":[\"bread\",\"bakery\",\"food\"]}"
+                }
+            }
+            """;
+
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.OK,
+            json);
+
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+
+        var client = new OllamaClient(httpClient);
+
+        var result = await client.GenerateMetadataAsync(
+            "test-metadata-model",
+            "Create metadata from this description.");
+
+        Assert.Equal(
+            "Freshly baked bread",
+            result.Title);
+
+        Assert.Equal(
+            ["bread", "bakery", "food"],
+            result.Keywords);
+    }
+
+    [Fact]
+    public async Task GenerateMetadataAsync_Throws_WhenResponseIsNotSuccessful()
+    {
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.InternalServerError);
+
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+
+        var client = new OllamaClient(httpClient);
+
+        await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.GenerateMetadataAsync(
+                "test-metadata-model",
+                "Create metadata from this description."));
+    }
+
+    [Fact]
+    public async Task GenerateMetadataAsync_Throws_WhenMetadataJsonIsInvalid()
+    {
+        const string json = """
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": "This is not valid JSON."
+                }
+            }
+            """;
+
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.OK,
+            json);
+
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+
+        var client = new OllamaClient(httpClient);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => client.GenerateMetadataAsync(
+                "test-metadata-model",
+                "Create metadata from this description."));
+    }
+
+    [Fact]
+    public async Task GenerateMetadataAsync_DoesNotSendImages()
+    {
+        const string json = """
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": "{\"title\":\"Freshly baked bread\",\"keywords\":[\"bread\"]}"
+                }
+            }
+            """;
+
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.OK,
+            json);
+
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+
+        var client = new OllamaClient(httpClient);
+
+        await client.GenerateMetadataAsync(
+            "test-metadata-model",
+            "Create metadata from this description.");
+
+        Assert.NotNull(handler.LastRequestContent);
+
+        Assert.DoesNotContain(
+            "\"images\"",
+            handler.LastRequestContent);
+    }
+
     private sealed class FakeHttpMessageHandler : HttpMessageHandler
     {
         private readonly HttpStatusCode? _statusCode;
@@ -239,9 +356,11 @@ public class OllamaClientTests
         private readonly string? _content;
 
         public HttpRequestMessage? LastRequest { get; private set; }
+
         public string? LastRequestContent { get; private set; }
 
-        public FakeHttpMessageHandler(HttpStatusCode statusCode)
+        public FakeHttpMessageHandler(
+            HttpStatusCode statusCode)
         {
             _statusCode = statusCode;
         }
@@ -254,7 +373,8 @@ public class OllamaClientTests
             _content = content;
         }
 
-        public FakeHttpMessageHandler(Exception exception)
+        public FakeHttpMessageHandler(
+            Exception exception)
         {
             _exception = exception;
         }
@@ -267,14 +387,16 @@ public class OllamaClientTests
 
             LastRequestContent = request.Content is null
                 ? null
-                : await request.Content.ReadAsStringAsync(cancellationToken);
-                
+                : await request.Content.ReadAsStringAsync(
+                    cancellationToken);
+
             if (_exception is not null)
             {
                 throw _exception;
             }
 
-            var response = new HttpResponseMessage(_statusCode!.Value);
+            var response = new HttpResponseMessage(
+                _statusCode!.Value);
 
             if (_content is not null)
             {

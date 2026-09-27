@@ -121,13 +121,21 @@ public class OllamaServiceTests
             return Task.FromResult(Models);
         }
 
-        public Task<string> GenerateAsync(
+        public Task<string> GenerateVisionAsync(
             string model,
             string prompt,
             string imageBase64,
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(string.Empty);
+        }
+
+        public Task<ImageMetadata> GenerateMetadataAsync(
+            string model,
+            string prompt,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new ImageMetadata());
         }
     }
 }

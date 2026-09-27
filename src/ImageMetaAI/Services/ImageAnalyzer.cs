@@ -37,7 +37,7 @@ public class ImageAnalyzer : IImageAnalyzer
             that cannot be reliably determined from the image.
             """;
 
-        var response = await _ollamaClient.GenerateAsync(
+        var response = await _ollamaClient.GenerateVisionAsync(
             _modelSettings.VisionModel,
             prompt,
             imageBase64,

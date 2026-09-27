@@ -12,6 +12,8 @@ public class ImageFile
 
     public ImageStatus Status { get; set; } = ImageStatus.Open;
 
+    public string? VisionDescription { get; set; }
+
     public ImageFile(string filePath)
     {
         FilePath = filePath;

@@ -103,20 +103,14 @@ public partial class MainWindow : Window
         {
             OllamaStatusText.Text = "Analyzing image...";
 
-            var result = await _imageAnalyzer.AnalyzeAsync(
-                imageFile.FilePath);
+            var result = await _imageAnalyzer.AnalyzeAsync(imageFile.FilePath);
 
-            var resultJson = System.Text.Json.JsonSerializer.Serialize(
-                result,
-                new System.Text.Json.JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
+            imageFile.VisionDescription = result;
 
             OllamaStatusText.Text = "Analysis complete.";
 
             System.Windows.MessageBox.Show(
-                resultJson,
+                result,
                 "Vision Analysis");
         }
         catch (Exception ex)

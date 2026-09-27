@@ -6,7 +6,7 @@ namespace ImageMetaAI.Tests;
 public class ImageAnalyzerTests
 {
     [Fact]
-    public async Task AnalyzeAsync_ReturnsVisionAnalysis_WhenOllamaReturnsValidJson()
+    public async Task AnalyzeAsync_ReturnsResponse_WhenOllamaReturnsText()
     {
         var imagePath = CreateTempImage();
 
@@ -15,19 +15,7 @@ public class ImageAnalyzerTests
             var client = new FakeOllamaClient
             {
                 Response = """
-                    {
-                        "description": "A mountain landscape with a lake.",
-                        "objects": [
-                            "mountain",
-                            "lake",
-                            "trees"
-                        ],
-                        "activities": [],
-                        "settings": [
-                            "nature",
-                            "mountain landscape"
-                        ]
-                    }
+                    A freshly baked loaf of bread with herbs, roasted tomatoes and sliced olives.
                     """
             };
 
@@ -36,12 +24,8 @@ public class ImageAnalyzerTests
             var result = await analyzer.AnalyzeAsync(imagePath);
 
             Assert.Equal(
-                "A mountain landscape with a lake.",
-                result.Description);
-
-            Assert.Contains("mountain", result.Objects);
-            Assert.Contains("lake", result.Objects);
-            Assert.Contains("nature", result.Settings);
+                "A freshly baked loaf of bread with herbs, roasted tomatoes and sliced olives.",
+                result);
         }
         finally
         {
@@ -75,14 +59,7 @@ public class ImageAnalyzerTests
 
             var client = new FakeOllamaClient
             {
-                Response = """
-                    {
-                        "description": "Test image.",
-                        "objects": [],
-                        "activities": [],
-                        "settings": []
-                    }
-                    """
+                Response = "Test image description."
             };
 
             var analyzer = new ImageAnalyzer(client);
@@ -94,6 +71,7 @@ public class ImageAnalyzerTests
                 client.Model);
 
             Assert.NotEmpty(client.Prompt);
+
             Assert.Equal(
                 Convert.ToBase64String(imageBytes),
                 client.ImageBase64);

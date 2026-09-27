@@ -4,7 +4,7 @@ namespace ImageMetaAI.Services;
 
 public interface IImageAnalyzer
 {
-    Task<VisionAnalysis> AnalyzeAsync(
+    Task<string> AnalyzeAsync(
         string imagePath,
         CancellationToken cancellationToken = default);
 }

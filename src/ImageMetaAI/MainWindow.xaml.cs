@@ -81,6 +81,7 @@ public partial class MainWindow : Window
         if (ImageList.SelectedItem is not ImageFile imageFile)
         {
             ImagePreview.Source = null;
+            VisionDescriptionText.Clear();
             return;
         }
 
@@ -92,6 +93,8 @@ public partial class MainWindow : Window
         bitmap.EndInit();
 
         ImagePreview.Source = bitmap;
+        VisionDescriptionText.Text =
+            imageFile.VisionDescription ?? "No vision description available.";
     }
 
     private async void AnalyzeImage_Click(object sender, RoutedEventArgs e)
@@ -107,21 +110,26 @@ public partial class MainWindow : Window
 
         try
         {
-            OllamaStatusText.Text = "Analyzing image...";
+            OllamaStatusText.Text = "Analyzing image...";            
+            imageFile.Status = ImageStatus.Processing;
+            ImageList.Items.Refresh();
 
             var result = await _imageAnalyzer.AnalyzeAsync(imageFile.FilePath);
 
             imageFile.VisionDescription = result;
 
-            OllamaStatusText.Text = "Analysis complete.";
+            VisionDescriptionText.Text = result;
 
-            System.Windows.MessageBox.Show(
-                result,
-                "Vision Analysis");
+            OllamaStatusText.Text = "Analysis complete.";  
+            imageFile.Status = ImageStatus.Review;
+            ImageList.Items.Refresh();         
         }
         catch (Exception ex)
         {
             OllamaStatusText.Text = "Image analysis failed.";
+
+            imageFile.Status = ImageStatus.Error;
+            ImageList.Items.Refresh();
 
             System.Windows.MessageBox.Show(
                 ex.Message,

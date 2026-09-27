@@ -10,7 +10,7 @@ public partial class MainWindow : Window
 {
     private readonly ImageScanner _imageScanner = new();
     private readonly IOllamaService _ollamaService;
-    private readonly IImageAnalyzer _imageAnalyzer;
+    private readonly IImageProcessingService _imageProcessingService;
 
     public MainWindow()
     {
@@ -29,9 +29,17 @@ public partial class MainWindow : Window
             ollamaClient,
             modelSettings);
 
-        _imageAnalyzer = new ImageAnalyzer(
+        var imageAnalyzer = new ImageAnalyzer(
             ollamaClient,
             modelSettings);
+
+        var metadataGenerator = new MetadataGenerator(
+            ollamaClient,
+            modelSettings);
+
+        _imageProcessingService = new ImageProcessingService(
+            imageAnalyzer,
+            metadataGenerator);
 
         Loaded += MainWindow_Loaded;
     }
@@ -107,28 +115,30 @@ public partial class MainWindow : Window
 
             return;
         }
-
+       
         try
         {
-            OllamaStatusText.Text = "Analyzing image...";            
-            imageFile.Status = ImageStatus.Processing;
+            OllamaStatusText.Text = "Processing image...";
+
+            await _imageProcessingService.ProcessAsync(
+                imageFile,
+                updatedImage =>
+                {
+                    VisionDescriptionText.Text =
+                        updatedImage.VisionDescription
+                        ?? "No vision description available.";
+
+                    ImageList.Items.Refresh();
+                });
+
+            OllamaStatusText.Text = "Processing complete.";
+
             ImageList.Items.Refresh();
-
-            var result = await _imageAnalyzer.AnalyzeAsync(imageFile.FilePath);
-
-            imageFile.VisionDescription = result;
-
-            VisionDescriptionText.Text = result;
-
-            OllamaStatusText.Text = "Analysis complete.";  
-            imageFile.Status = ImageStatus.Review;
-            ImageList.Items.Refresh();         
         }
         catch (Exception ex)
         {
-            OllamaStatusText.Text = "Image analysis failed.";
+            OllamaStatusText.Text = "Image processing failed.";
 
-            imageFile.Status = ImageStatus.Error;
             ImageList.Items.Refresh();
 
             System.Windows.MessageBox.Show(

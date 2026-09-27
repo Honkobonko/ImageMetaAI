@@ -163,8 +163,8 @@ public class OllamaClient : IOllamaClient
         }
         catch (JsonException ex)
         {
-            throw new InvalidOperationException(
-                "Ollama returned invalid metadata JSON.",
+              throw new InvalidOperationException(
+                $"Ollama returned invalid metadata JSON. Response: {result.Message.Content}",
                 ex);
         }
     }

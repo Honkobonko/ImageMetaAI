@@ -4,13 +4,15 @@ namespace ImageMetaAI.Services;
 
 public class ImageAnalyzer : IImageAnalyzer
 {
-    private const string Model = "qwen2.5vl:7b";
+    private readonly OllamaModelSettings _modelSettings;
 
     private readonly IOllamaClient _ollamaClient;
 
-    public ImageAnalyzer(IOllamaClient ollamaClient)
+    public ImageAnalyzer(IOllamaClient ollamaClient, OllamaModelSettings modelSettings)
     {
         _ollamaClient = ollamaClient;
+        _modelSettings = modelSettings;
+
     }
 
     public async Task<string> AnalyzeAsync(string imagePath, CancellationToken cancellationToken = default)
@@ -36,7 +38,7 @@ public class ImageAnalyzer : IImageAnalyzer
             """;
 
         var response = await _ollamaClient.GenerateAsync(
-            Model,
+            _modelSettings.VisionModel,
             prompt,
             imageBase64,
             cancellationToken);

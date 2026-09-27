@@ -19,7 +19,15 @@ public class ImageAnalyzerTests
                     """
             };
 
-            var analyzer = new ImageAnalyzer(client);
+            var modelSettings = new OllamaModelSettings
+            {
+                VisionModel = "test-vision-model",
+                MetadataModel = "test-metadata-model"
+            };
+
+            var analyzer = new ImageAnalyzer(
+                client,
+                modelSettings);
 
             var result = await analyzer.AnalyzeAsync(imagePath);
 
@@ -38,7 +46,15 @@ public class ImageAnalyzerTests
     {
         var client = new FakeOllamaClient();
 
-        var analyzer = new ImageAnalyzer(client);
+        var modelSettings = new OllamaModelSettings
+        {
+            VisionModel = "test-vision-model",
+            MetadataModel = "test-metadata-model"
+        };
+
+        var analyzer = new ImageAnalyzer(
+            client,
+            modelSettings);
 
         var missingPath = Path.Combine(
             Path.GetTempPath(),
@@ -62,12 +78,20 @@ public class ImageAnalyzerTests
                 Response = "Test image description."
             };
 
-            var analyzer = new ImageAnalyzer(client);
+            var modelSettings = new OllamaModelSettings
+            {
+                VisionModel = "test-vision-model",
+                MetadataModel = "test-metadata-model"
+            };
+
+            var analyzer = new ImageAnalyzer(
+                client,
+                modelSettings);
 
             await analyzer.AnalyzeAsync(imagePath);
 
             Assert.Equal(
-                "qwen2.5vl:7b",
+                modelSettings.VisionModel,
                 client.Model);
 
             Assert.NotEmpty(client.Prompt);
@@ -131,3 +155,4 @@ public class ImageAnalyzerTests
         }
     }
 }
+

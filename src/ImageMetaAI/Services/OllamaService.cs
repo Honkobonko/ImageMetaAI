@@ -2,14 +2,14 @@ namespace ImageMetaAI.Services;
 
 public class OllamaService : IOllamaService
 {
-    private const string RequiredVisionModel = "qwen2.5vl:7b";
-    private const string RequiredMetadataModel = "gemma4:26b";
+    private readonly OllamaModelSettings _modelSettings;
 
     private readonly IOllamaClient _ollamaClient;
 
-    public OllamaService(IOllamaClient ollamaClient)
+    public OllamaService(IOllamaClient ollamaClient, OllamaModelSettings modelSettings)
     {
         _ollamaClient = ollamaClient;
+        _modelSettings = modelSettings;
     }
 
     public async Task<bool> IsReadyAsync(
@@ -27,7 +27,7 @@ public class OllamaService : IOllamaService
             .Select(model => model.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        return modelNames.Contains(RequiredVisionModel)
-            && modelNames.Contains(RequiredMetadataModel);
+        return modelNames.Contains(_modelSettings.VisionModel)
+            && modelNames.Contains(_modelSettings.MetadataModel);
     }
 }

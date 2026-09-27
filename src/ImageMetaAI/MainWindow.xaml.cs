@@ -23,9 +23,15 @@ public partial class MainWindow : Window
 
         var ollamaClient = new OllamaClient(httpClient);
 
-        _ollamaService = new OllamaService(ollamaClient);
+        var modelSettings = new OllamaModelSettings();
 
-        _imageAnalyzer = new ImageAnalyzer(ollamaClient);
+        _ollamaService = new OllamaService(
+            ollamaClient,
+            modelSettings);
+
+        _imageAnalyzer = new ImageAnalyzer(
+            ollamaClient,
+            modelSettings);
 
         Loaded += MainWindow_Loaded;
     }

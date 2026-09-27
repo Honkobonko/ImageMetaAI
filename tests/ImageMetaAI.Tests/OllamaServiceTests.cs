@@ -13,7 +13,11 @@ public class OllamaServiceTests
             IsAvailable = false
         };
 
-        var service = new OllamaService(client);
+        var modelSettings = CreateModelSettings();
+
+        var service = new OllamaService(
+            client,
+            modelSettings);
 
         var result = await service.IsReadyAsync();
 
@@ -23,17 +27,21 @@ public class OllamaServiceTests
     [Fact]
     public async Task IsReadyAsync_ReturnsTrue_WhenRequiredModelsAreInstalled()
     {
+        var modelSettings = CreateModelSettings();
+
         var client = new FakeOllamaClient
         {
             IsAvailable = true,
             Models =
             [
-                new OllamaModel { Name = "qwen2.5vl:7b" },
-                new OllamaModel { Name = "gemma4:26b" }
+                new OllamaModel { Name = modelSettings.VisionModel },
+                new OllamaModel { Name = modelSettings.MetadataModel }
             ]
         };
 
-        var service = new OllamaService(client);
+        var service = new OllamaService(
+            client,
+            modelSettings);
 
         var result = await service.IsReadyAsync();
 
@@ -43,16 +51,20 @@ public class OllamaServiceTests
     [Fact]
     public async Task IsReadyAsync_ReturnsFalse_WhenVisionModelIsMissing()
     {
+        var modelSettings = CreateModelSettings();
+
         var client = new FakeOllamaClient
         {
             IsAvailable = true,
             Models =
             [
-                new OllamaModel { Name = "gemma4:26b" }
+                new OllamaModel { Name = modelSettings.MetadataModel }
             ]
         };
 
-        var service = new OllamaService(client);
+        var service = new OllamaService(
+            client,
+            modelSettings);
 
         var result = await service.IsReadyAsync();
 
@@ -62,20 +74,33 @@ public class OllamaServiceTests
     [Fact]
     public async Task IsReadyAsync_ReturnsFalse_WhenMetadataModelIsMissing()
     {
+        var modelSettings = CreateModelSettings();
+
         var client = new FakeOllamaClient
         {
             IsAvailable = true,
             Models =
             [
-                new OllamaModel { Name = "qwen2.5vl:7b" }
+                new OllamaModel { Name = modelSettings.VisionModel }
             ]
         };
 
-        var service = new OllamaService(client);
+        var service = new OllamaService(
+            client,
+            modelSettings);
 
         var result = await service.IsReadyAsync();
 
         Assert.False(result);
+    }
+
+    private static OllamaModelSettings CreateModelSettings()
+    {
+        return new OllamaModelSettings
+        {
+            VisionModel = "test-vision-model",
+            MetadataModel = "test-metadata-model"
+        };
     }
 
     private sealed class FakeOllamaClient : IOllamaClient
@@ -97,9 +122,9 @@ public class OllamaServiceTests
         }
 
         public Task<string> GenerateAsync(
-        string model,
-        string prompt,
-        string imageBase64,
+            string model,
+            string prompt,
+            string imageBase64,
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(string.Empty);

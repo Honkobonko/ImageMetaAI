@@ -1,5 +1,6 @@
 ﻿using System.Net.Http;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 using ImageMetaAI.Models;
 using ImageMetaAI.Services;
@@ -8,13 +9,21 @@ namespace ImageMetaAI;
 
 public partial class MainWindow : Window
 {
-    private readonly ImageScanner _imageScanner = new();
-    private readonly IOllamaService _ollamaService;
-    private readonly IImageProcessingService _imageProcessingService;
+private readonly ImageScanner _imageScanner = new();
+private readonly IOllamaService _ollamaService;
+private readonly IImageProcessingService _imageProcessingService;
 
-    public MainWindow()
-    {
+public MainWindow()
+{
         InitializeComponent();
+
+        PrimaryCategoryComboBox.ItemsSource =
+            ShutterstockCategories.All;
+
+        SecondaryCategoryComboBox.ItemsSource =
+            new[] { string.Empty }
+                .Concat(ShutterstockCategories.All)
+                .ToList();
 
         var httpClient = new HttpClient
         {
@@ -88,7 +97,7 @@ public partial class MainWindow : Window
 
     private void ImageList_SelectionChanged(
         object sender,
-        System.Windows.Controls.SelectionChangedEventArgs e)
+        SelectionChangedEventArgs e)
     {
         if (ImageList.SelectedItem is not ImageFile imageFile)
         {
@@ -96,6 +105,8 @@ public partial class MainWindow : Window
             VisionDescriptionText.Clear();
             TitleText.Clear();
             KeywordsText.Clear();
+            PrimaryCategoryComboBox.SelectedItem = null;
+            SecondaryCategoryComboBox.SelectedItem = string.Empty;
 
             return;
         }
@@ -171,5 +182,40 @@ public partial class MainWindow : Window
                 : string.Join(
                     ", ",
                     imageFile.Metadata.Keywords);
+
+        PrimaryCategoryComboBox.SelectedItem =
+            imageFile.Metadata?.Category;
+
+        SecondaryCategoryComboBox.SelectedItem =
+            imageFile.Metadata?.SecondaryCategory
+            ?? string.Empty;
+    }
+
+    private void PrimaryCategoryComboBox_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (ImageList.SelectedItem is not ImageFile imageFile ||
+            imageFile.Metadata is null ||
+            PrimaryCategoryComboBox.SelectedItem is not string category)
+        {
+            return;
+        }
+
+        imageFile.Metadata.Category = category;
+    }
+
+    private void SecondaryCategoryComboBox_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (ImageList.SelectedItem is not ImageFile imageFile ||
+            imageFile.Metadata is null)
+        {
+            return;
+        }
+
+        imageFile.Metadata.SecondaryCategory =
+            SecondaryCategoryComboBox.SelectedItem as string;
     }
 }

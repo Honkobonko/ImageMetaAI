@@ -109,9 +109,39 @@ public class OllamaClient : IOllamaClient
         {
             Model = model,
             Stream = false,
+            Format = new
+            {
+                type = "object",
+                properties = new
+                {
+                    title = new
+                    {
+                        type = "string"
+                    },
+                    keywords = new
+                    {
+                        type = "array",
+                        minItems = 20,
+                        maxItems = 30,
+                        uniqueItems = true,
+                        items = new
+                        {
+                            type = "string"
+                        }
+                    }
+                },
+                required = new[]
+                {
+                    "title",
+                    "keywords"
+                },
+                additionalProperties = false
+            },
             Options = new OllamaOptions
             {
-                NumCtx = 8192
+                NumCtx = 8192,
+                Temperature = 0,
+                NumPredict = 512
             },
             Messages =
             [
@@ -163,7 +193,7 @@ public class OllamaClient : IOllamaClient
         }
         catch (JsonException ex)
         {
-              throw new InvalidOperationException(
+            throw new InvalidOperationException(
                 $"Ollama returned invalid metadata JSON. Response: {result.Message.Content}",
                 ex);
         }
@@ -181,6 +211,9 @@ public class OllamaClient : IOllamaClient
 
         public bool Stream { get; init; }
 
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public object? Format { get; init; }
+
         public OllamaOptions Options { get; init; } = new();
 
         public List<OllamaMessage> Messages { get; init; } = [];
@@ -190,6 +223,12 @@ public class OllamaClient : IOllamaClient
     {
         [JsonPropertyName("num_ctx")]
         public int NumCtx { get; init; }
+
+        [JsonPropertyName("temperature")]
+        public double Temperature { get; init; }
+
+        [JsonPropertyName("num_predict")]
+        public int NumPredict { get; init; }
     }
 
     private sealed class OllamaMessage
@@ -207,4 +246,3 @@ public class OllamaClient : IOllamaClient
         public OllamaMessage Message { get; init; } = new();
     }
 }
-

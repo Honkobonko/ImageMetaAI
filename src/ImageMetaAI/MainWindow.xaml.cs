@@ -44,7 +44,9 @@ public partial class MainWindow : Window
         Loaded += MainWindow_Loaded;
     }
 
-    private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    private async void MainWindow_Loaded(
+        object sender,
+        RoutedEventArgs e)
     {
         OllamaStatusText.Text = "Checking Ollama...";
 
@@ -55,7 +57,9 @@ public partial class MainWindow : Window
             : "Ollama is not ready";
     }
 
-    private void SelectFolder_Click(object sender, RoutedEventArgs e)
+    private void SelectFolder_Click(
+        object sender,
+        RoutedEventArgs e)
     {
         using var dialog = new System.Windows.Forms.FolderBrowserDialog
         {
@@ -90,6 +94,9 @@ public partial class MainWindow : Window
         {
             ImagePreview.Source = null;
             VisionDescriptionText.Clear();
+            TitleText.Clear();
+            KeywordsText.Clear();
+
             return;
         }
 
@@ -101,11 +108,13 @@ public partial class MainWindow : Window
         bitmap.EndInit();
 
         ImagePreview.Source = bitmap;
-        VisionDescriptionText.Text =
-            imageFile.VisionDescription ?? "No vision description available.";
+
+        UpdateMetadataFields(imageFile);
     }
 
-    private async void AnalyzeImage_Click(object sender, RoutedEventArgs e)
+    private async void AnalyzeImage_Click(
+        object sender,
+        RoutedEventArgs e)
     {
         if (ImageList.SelectedItem is not ImageFile imageFile)
         {
@@ -115,7 +124,7 @@ public partial class MainWindow : Window
 
             return;
         }
-       
+
         try
         {
             OllamaStatusText.Text = "Processing image...";
@@ -124,9 +133,7 @@ public partial class MainWindow : Window
                 imageFile,
                 updatedImage =>
                 {
-                    VisionDescriptionText.Text =
-                        updatedImage.VisionDescription
-                        ?? "No vision description available.";
+                    UpdateMetadataFields(updatedImage);
 
                     ImageList.Items.Refresh();
                 });
@@ -145,5 +152,24 @@ public partial class MainWindow : Window
                 ex.Message,
                 "ImageMetaAI");
         }
+    }
+
+    private void UpdateMetadataFields(
+        ImageFile imageFile)
+    {
+        VisionDescriptionText.Text =
+            imageFile.VisionDescription
+            ?? "No vision description available.";
+
+        TitleText.Text =
+            imageFile.Metadata?.Title
+            ?? string.Empty;
+
+        KeywordsText.Text =
+            imageFile.Metadata is null
+                ? string.Empty
+                : string.Join(
+                    ", ",
+                    imageFile.Metadata.Keywords);
     }
 }

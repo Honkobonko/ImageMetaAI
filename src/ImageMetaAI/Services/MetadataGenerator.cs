@@ -27,18 +27,17 @@ public class MetadataGenerator : IMetadataGenerator
         }
 
         const string prompt = """
-            Create stock photography metadata from the following image description.
+            Create stock photography metadata from the image description.
 
-            Return valid JSON only using this structure:
-            {
-              "title": "one concise English stock-photo title",
-              "keywords": [
-                "20 to 30 relevant English keywords"
-              ]
-            }
+            Generate: 
+            - A concise, descriptive English stock photo title. 
+            - 20 to 30 relevant English keywords. 
 
-            Do not invent people, locations, brands, events, or other details
-            that are not supported by the description.
+            Keywords should be specific and useful for stock photography search. 
+            Prefer concrete subjects, objects, actions, environment, composition, visual characteristics, and relevant concepts. 
+
+            Use only information supported by the image description. 
+            Do not invent names, locations, brands, professions, events, or other details that cannot be determined from the description. 
 
             Image description:
             """;

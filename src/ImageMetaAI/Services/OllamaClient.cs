@@ -128,12 +128,31 @@ public class OllamaClient : IOllamaClient
                         {
                             type = "string"
                         }
+                    },
+                    category = new
+                    {
+                        type = "string",
+                        @enum = ShutterstockCategories.All
+                    },
+                    secondaryCategory = new
+                    {
+                        type = new[]
+                        {
+                            "string",
+                            "null"
+                        },
+                        @enum = ShutterstockCategories.All
+                            .Cast<string?>()
+                            .Prepend(null)
+                            .ToArray()
                     }
                 },
                 required = new[]
                 {
                     "title",
-                    "keywords"
+                    "keywords",
+                    "category",
+                    "secondaryCategory"
                 },
                 additionalProperties = false
             },
@@ -171,6 +190,8 @@ public class OllamaClient : IOllamaClient
         var result = await response.Content
             .ReadFromJsonAsync<OllamaChatResponse>(
                 cancellationToken);
+
+        System.Diagnostics.Debug.WriteLine($"Ollama metadata JSON: {result?.Message.Content}");   
 
         if (result is null)
         {

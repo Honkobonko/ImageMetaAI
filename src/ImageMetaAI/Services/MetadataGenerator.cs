@@ -27,17 +27,73 @@ public class MetadataGenerator : IMetadataGenerator
         }
 
         const string prompt = """
-            Create stock photography metadata from the image description.
+            Create accurate, searchable stock photography metadata
+            in English based only on the image description.
 
-            Generate: 
-            - A concise, descriptive English stock photo title. 
-            - 20 to 30 relevant English keywords. 
+            TITLE
+            - Write a clear, specific, natural stock photo title.
+            - Use at least 5 words.
+            - Describe the main subject and relevant visible context.
+            - Avoid keyword lists, repetition, and unnecessary filler.
+            - Do not exceed 2048 characters.
 
-            Keywords should be specific and useful for stock photography search. 
-            Prefer concrete subjects, objects, actions, environment, composition, visual characteristics, and relevant concepts. 
+            KEYWORDS
+            - Generate 20 to 30 distinct, relevant keywords.
+            - Use individual words or concise phrases where appropriate.
+            - Put the most important and specific keywords first.
+            - Prioritize the main subject, visible objects, actions,
+              setting, composition, and clearly supported concepts.
+            - Avoid synonyms that add little meaning, repeated ideas,
+              redundant variations, and generic filler.
+            - Every keyword must add useful search value.
+            - Do not include unsupported assumptions.
 
-            Use only information supported by the image description. 
-            Do not invent names, locations, brands, professions, events, or other details that cannot be determined from the description. 
+            CATEGORY ANS SECONDARYCATEGORY
+            Choose the best category and, if useful, a different
+            secondary category from this exact list:
+            - Abstract
+            - Animals/Wildlife
+            - Arts
+            - Backgrounds/Textures
+            - Beauty/Fashion
+            - Buildings/Landmarks
+            - Business/Finance
+            - Celebrities
+            - Education
+            - Food and Drink
+            - Healthcare/Medical
+            - Holidays
+            - Industrial
+            - Interiors
+            - Miscellaneous
+            - Nature
+            - Objects
+            - Parks/Outdoor
+            - People
+            - Religion
+            - Science
+            - Signs/Symbols
+            - Sports/Recreation
+            - Technology
+            - Transportation
+            - Vintage
+
+            CATEGORY RULES
+            - The primary category is required.
+            - Choose the category that best represents the main subject.
+            - Use the secondary category only when it adds a meaningful,
+              distinct classification.
+            - Otherwise, set secondaryCategory to null.
+            - Never choose the same category twice.
+            - Select only categories from the supplied list.
+
+            ACCURACY
+            - Use only information supported by the image description.
+            - Do not invent names, locations, brands, professions,
+              events, or other details.
+            - If a detail is uncertain, leave it out.
+
+            Return only the metadata matching the required JSON schema.
 
             Image description:
             """;

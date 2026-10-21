@@ -12,40 +12,100 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Folder selection and processing -->
-        <WrapPanel Grid.Row="0" Margin="0,0,0,10">
+        <WrapPanel Grid.Row="0" Margin="0,0,0,12">
             <Button Content="Select Folder..."
                     Width="130"
-                    Height="32"
+                    Height="34"
                     Margin="0,0,8,0"
                     Click="SelectFolder_Click"/>
 
             <Button Content="Analyze All New"
                     Width="140"
-                    Height="32"
+                    Height="34"
                     Margin="0,0,8,0"
                     Click="AnalyzeAllNew_Click"/>
 
             <Button Content="Analyze Selected"
                     Width="150"
-                    Height="32"
+                    Height="34"
                     Margin="0,0,8,0"
                     Click="AnalyzeSelected_Click"/>
 
-            <TextBlock x:Name="FolderPathText"
-                    Margin="8,8,0,0"
-                    VerticalAlignment="Center"
-                    Text="No folder selected"/>
+            <Button x:Name="ExportCsvButton"
+                    Content="Export Shutterstock CSV"
+                    Width="190"
+                    Height="34"
+                    Margin="0,0,8,0"
+                    IsEnabled="False"
+                    Click="ExportCsv_Click"/>
         </WrapPanel>
 
-        <!-- Image count -->
-        <TextBlock Grid.Row="1"
-                   x:Name="ImageCountText"
-                   Margin="0,0,0,8"
-                   Text="No images loaded"/>
+        <!-- Selected folder -->
+        <Border Grid.Row="1"
+                Background="#F0F4F8"
+                BorderBrush="#CCD6E0"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="12"
+                Margin="0,0,0,10">
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0"
+                        Background="#DCE8F5"
+                        CornerRadius="5"
+                        Width="44"
+                        Height="44"
+                        Margin="0,0,12,0">
+                    <TextBlock Text="📁"
+                               FontSize="23"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                </Border>
+
+                <StackPanel Grid.Column="1"
+                            VerticalAlignment="Center">
+
+                    <TextBlock Text="SELECTED IMAGE FOLDER"
+                               FontSize="11"
+                               FontWeight="Bold"
+                               Foreground="#526579"
+                               Margin="0,0,0,4"/>
+
+                    <TextBlock x:Name="FolderPathText"
+                               Text="No folder selected"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               Foreground="#1D2939"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+
+                    <TextBlock x:Name="ImageCountText"
+                               Text="No images loaded"
+                               FontSize="12"
+                               Foreground="#526579"
+                               Margin="0,4,0,0"/>
+                </StackPanel>
+
+                <Button Grid.Column="2"
+                        Content="Open Folder"
+                        Width="110"
+                        Height="34"
+                        Margin="12,0,0,0"
+                        VerticalAlignment="Center"
+                        Click="OpenFolder_Click"/>
+            </Grid>
+        </Border>
 
         <!-- Status and progress -->
         <StackPanel Grid.Row="2" Margin="0,0,0,10">
@@ -66,8 +126,11 @@
                        Margin="0,3,0,0"/>
         </StackPanel>
 
+        <!-- Reserved spacing row -->
+        <Grid Grid.Row="3"/>
+
         <!-- Main content -->
-        <Grid Grid.Row="3">
+        <Grid Grid.Row="4">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="300"/>
                 <ColumnDefinition Width="*"/>
@@ -148,6 +211,7 @@
                               Margin="0,10,0,0">
                         <TextBox x:Name="TitleText"
                                  TextWrapping="Wrap"
+                                 TextChanged="TitleText_TextChanged"
                                  MinHeight="45"
                                  Padding="8"/>
                     </GroupBox>
@@ -157,6 +221,7 @@
                               Margin="0,10,0,0">
                         <TextBox x:Name="KeywordsText"
                                  TextWrapping="Wrap"
+                                 TextChanged="KeywordsText_TextChanged"
                                  AcceptsReturn="True"
                                  VerticalScrollBarVisibility="Auto"
                                  MinHeight="80"

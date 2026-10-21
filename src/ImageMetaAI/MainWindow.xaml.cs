@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System.IO;
+using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
@@ -102,6 +103,8 @@ public partial class MainWindow : Window
         ImageCountText.Text = $"{images.Count} images found";
 
         ImageList.ItemsSource = images;
+
+        ExportCsvButton.IsEnabled = images.Count > 0;
 
         if (images.Count > 0)
         {
@@ -374,5 +377,134 @@ public partial class MainWindow : Window
 
         ImageCountText.Text =
             $"{total} images | {completed} reviewed | {failed} failed";
+    }
+
+    private readonly ShutterstockCsvExporter _csvExporter = new();
+
+    private void TitleText_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_isUpdatingFields ||
+            ImageList.SelectedItem is not ImageFile imageFile ||
+            imageFile.Metadata is null)
+        {
+            return;
+        }
+
+        imageFile.Metadata.Title = TitleText.Text;
+    }
+
+    private void KeywordsText_TextChanged(
+        object sender,
+        TextChangedEventArgs e)
+    {
+        if (_isUpdatingFields ||
+            ImageList.SelectedItem is not ImageFile imageFile ||
+            imageFile.Metadata is null)
+        {
+            return;
+        }
+
+        imageFile.Metadata.Keywords = KeywordsText.Text
+            .Split(
+                ',',
+                StringSplitOptions.RemoveEmptyEntries |
+                StringSplitOptions.TrimEntries);
+    }
+
+    private async void ExportCsv_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isProcessing)
+        {
+            return;
+        }
+
+        var folderPath = FolderPathText.Text;
+
+        if (string.IsNullOrWhiteSpace(folderPath) ||
+            !Directory.Exists(folderPath))
+        {
+            System.Windows.MessageBox.Show(
+                "Please select an image folder first.",
+                "ImageMetaAI",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+
+            return;
+        }
+
+        ExportCsvButton.IsEnabled = false;
+        ExportCsvButton.Content = "Exporting...";
+        OllamaStatusText.Text = "Exporting Shutterstock CSV...";
+
+        try
+        {
+            var images = ImageList.Items
+                .Cast<ImageFile>()
+                .ToList();
+
+            var filePath = await _csvExporter.ExportAsync(
+                folderPath,
+                images);
+
+            OllamaStatusText.Text = "CSV export completed.";
+
+            System.Windows.MessageBox.Show(
+                $"CSV export completed successfully:\n\n{filePath}",
+                "ImageMetaAI",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            OllamaStatusText.Text = "CSV export failed.";
+
+            System.Windows.MessageBox.Show(
+                ex.Message,
+                "CSV Export Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+        finally
+        {
+            ExportCsvButton.Content = "Export Shutterstock CSV";
+            ExportCsvButton.IsEnabled =
+                Directory.Exists(FolderPathText.Text) &&
+                !_isProcessing;
+        }
+    }
+
+    private void OpenFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var folderPath = FolderPathText.Text;
+
+        if (string.IsNullOrWhiteSpace(folderPath) ||
+            !Directory.Exists(folderPath))
+        {
+            System.Windows.MessageBox.Show(
+                "Please select a valid image folder first.",
+                "ImageMetaAI",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+
+            return;
+        }
+
+        try
+        {
+            System.Diagnostics.Process.Start(
+                new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = folderPath,
+                    UseShellExecute = true
+                });
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(
+                $"Could not open the folder:\n{ex.Message}",
+                "ImageMetaAI",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
     }
 }

@@ -126,8 +126,16 @@
                        Margin="0,3,0,0"/>
         </StackPanel>
 
-        <!-- Reserved spacing row -->
-        <Grid Grid.Row="3"/>
+        <!-- Location recognition -->
+        <StackPanel Grid.Row="3"
+            Orientation="Horizontal"
+            Margin="0,0,0,10">
+            <CheckBox x:Name="RecognizeLocationsCheckBox"
+                    Content="Recognize locations from GPS (🌍)"
+                    IsChecked="True"
+                    VerticalAlignment="Center"
+                    ToolTip="Resolve GPS coordinates online and use the location as AI context."/>
+        </StackPanel>
 
         <!-- Main content -->
         <Grid Grid.Row="4">
@@ -150,10 +158,31 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0"
-                                       Text="{Binding FileName}"
-                                       FontWeight="SemiBold"
-                                       TextWrapping="Wrap"/>
+                            <StackPanel Grid.Row="0"
+                                        Orientation="Horizontal">
+                                <TextBlock Text="{Binding FileName}"
+                                        FontWeight="SemiBold"
+                                        TextTrimming="CharacterEllipsis"
+                                        VerticalAlignment="Center"/>
+
+                                <TextBlock Text="🌍"
+                                        FontSize="13"
+                                        Margin="6,0,0,0"
+                                        VerticalAlignment="Center"
+                                        ToolTip="GPS coordinates available">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasGpsCoordinates}"
+                                                            Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
 
                             <TextBlock Grid.Row="1"
                                        Text="{Binding Status}"

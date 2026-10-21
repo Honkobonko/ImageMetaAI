@@ -14,6 +14,8 @@ public partial class MainWindow : Window
     private readonly IOllamaService _ollamaService;
     private readonly IImageProcessingService _imageProcessingService;
 
+    private readonly GpsMetadataReader _gpsMetadataReader = new();
+
     private bool _isUpdatingFields;
     private bool _isProcessing;
 
@@ -49,9 +51,12 @@ public partial class MainWindow : Window
             ollamaClient,
             modelSettings);
 
+        var locationService = new NominatimLocationService();
+
         _imageProcessingService = new ImageProcessingService(
             imageAnalyzer,
-            metadataGenerator);
+            metadataGenerator,
+            locationService);
 
         Loaded += MainWindow_Loaded;
     }
@@ -76,9 +81,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void SelectFolder_Click(
-        object sender,
-        RoutedEventArgs e)
+    private void SelectFolder_Click(object sender, RoutedEventArgs e)
     {
         if (_isProcessing)
         {
@@ -102,8 +105,22 @@ public partial class MainWindow : Window
         FolderPathText.Text = folderPath;
         ImageCountText.Text = $"{images.Count} images found";
 
-        ImageList.ItemsSource = images;
+        foreach (var image in images)
+        {
+            try
+            {
+                image.GpsCoordinates =
+                    _gpsMetadataReader.Read(image.FilePath);
+            }
+            catch (Exception ex)
+            {
+                // GPS metadata is optional. Keep the image available.
+                System.Diagnostics.Debug.WriteLine(
+                    $"Could not read GPS data from {image.FileName}: {ex.Message}");
+            }
+        }
 
+        ImageList.ItemsSource = images;
         ExportCsvButton.IsEnabled = images.Count > 0;
 
         if (images.Count > 0)
@@ -267,18 +284,20 @@ public partial class MainWindow : Window
                 try
                 {
                     await _imageProcessingService.ProcessAsync(
-                        imageFile,
-                        updatedImage =>
+                    imageFile,
+                    updatedImage =>
+                    {
+                        if (ReferenceEquals(
+                            ImageList.SelectedItem,
+                            updatedImage))
                         {
-                            if (ReferenceEquals(
-                                ImageList.SelectedItem,
-                                updatedImage))
-                            {
-                                UpdateMetadataFields(updatedImage);
-                            }
+                            UpdateMetadataFields(updatedImage);
+                        }
 
-                            ImageList.Items.Refresh();
-                        });
+                        ImageList.Items.Refresh();
+                    },
+                    recognizeLocations:
+                        RecognizeLocationsCheckBox.IsChecked == true);
 
                     succeeded++;
                 }

@@ -7,5 +7,6 @@ public interface IImageProcessingService
     Task ProcessAsync(
         ImageFile imageFile,
         Action<ImageFile>? progressCallback = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        bool recognizeLocations = false);
 }

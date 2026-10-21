@@ -9,12 +9,15 @@ namespace ImageMetaAI;
 
 public partial class MainWindow : Window
 {
-private readonly ImageScanner _imageScanner = new();
-private readonly IOllamaService _ollamaService;
-private readonly IImageProcessingService _imageProcessingService;
+    private readonly ImageScanner _imageScanner = new();
+    private readonly IOllamaService _ollamaService;
+    private readonly IImageProcessingService _imageProcessingService;
 
-public MainWindow()
-{
+    private bool _isUpdatingFields;
+    private bool _isProcessing;
+
+    public MainWindow()
+    {
         InitializeComponent();
 
         PrimaryCategoryComboBox.ItemsSource =
@@ -31,7 +34,6 @@ public MainWindow()
         };
 
         var ollamaClient = new OllamaClient(httpClient);
-
         var modelSettings = new OllamaModelSettings();
 
         _ollamaService = new OllamaService(
@@ -59,29 +61,41 @@ public MainWindow()
     {
         OllamaStatusText.Text = "Checking Ollama...";
 
-        var isReady = await _ollamaService.IsReadyAsync();
+        try
+        {
+            var isReady = await _ollamaService.IsReadyAsync();
 
-        OllamaStatusText.Text = isReady
-            ? "Ollama ready"
-            : "Ollama is not ready";
+            OllamaStatusText.Text = isReady
+                ? "Ollama ready"
+                : "Ollama is not ready";
+        }
+        catch
+        {
+            OllamaStatusText.Text = "Could not connect to Ollama.";
+        }
     }
 
     private void SelectFolder_Click(
         object sender,
         RoutedEventArgs e)
     {
+        if (_isProcessing)
+        {
+            return;
+        }
+
         using var dialog = new System.Windows.Forms.FolderBrowserDialog
         {
             Description = "Select the folder containing your images."
         };
 
-        if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK)
+        if (dialog.ShowDialog() !=
+            System.Windows.Forms.DialogResult.OK)
         {
             return;
         }
 
         var folderPath = dialog.SelectedPath;
-
         var images = _imageScanner.ScanFolder(folderPath);
 
         FolderPathText.Text = folderPath;
@@ -93,6 +107,14 @@ public MainWindow()
         {
             ImageList.SelectedIndex = 0;
         }
+        else
+        {
+            ClearMetadataFields();
+        }
+
+        UpdateImageCount();
+        ProcessingProgressBar.Value = 0;
+        ProcessingProgressText.Text = string.Empty;
     }
 
     private void ImageList_SelectionChanged(
@@ -101,101 +123,49 @@ public MainWindow()
     {
         if (ImageList.SelectedItem is not ImageFile imageFile)
         {
-            ImagePreview.Source = null;
-            VisionDescriptionText.Clear();
-            TitleText.Clear();
-            KeywordsText.Clear();
-            PrimaryCategoryComboBox.SelectedItem = null;
-            SecondaryCategoryComboBox.SelectedItem = string.Empty;
-
-            return;
-        }
-
-        var bitmap = new BitmapImage();
-
-        bitmap.BeginInit();
-        bitmap.UriSource = new Uri(imageFile.FilePath);
-        bitmap.CacheOption = BitmapCacheOption.OnLoad;
-        bitmap.EndInit();
-
-        ImagePreview.Source = bitmap;
-
-        UpdateMetadataFields(imageFile);
-    }
-
-    private async void AnalyzeImage_Click(
-        object sender,
-        RoutedEventArgs e)
-    {
-        if (ImageList.SelectedItem is not ImageFile imageFile)
-        {
-            System.Windows.MessageBox.Show(
-                "Please select an image first.",
-                "ImageMetaAI");
-
+            ClearMetadataFields();
             return;
         }
 
         try
         {
-            OllamaStatusText.Text = "Processing image...";
+            var bitmap = new BitmapImage();
 
-            await _imageProcessingService.ProcessAsync(
-                imageFile,
-                updatedImage =>
-                {
-                    UpdateMetadataFields(updatedImage);
+            bitmap.BeginInit();
+            bitmap.UriSource = new Uri(imageFile.FilePath);
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.EndInit();
 
-                    ImageList.Items.Refresh();
-                });
-
-            OllamaStatusText.Text = "Processing complete.";
-
-            ImageList.Items.Refresh();
+            ImagePreview.Source = bitmap;
         }
-        catch (Exception ex)
+        catch
         {
-            OllamaStatusText.Text = "Image processing failed.";
-
-            ImageList.Items.Refresh();
-
-            System.Windows.MessageBox.Show(
-                ex.Message,
-                "ImageMetaAI");
+            ImagePreview.Source = null;
         }
+
+        UpdateMetadataFields(imageFile);
     }
 
-    private void UpdateMetadataFields(
-        ImageFile imageFile)
+    private void AdditionalInformationText_TextChanged(
+        object sender,
+        TextChangedEventArgs e)
     {
-        VisionDescriptionText.Text =
-            imageFile.VisionDescription
-            ?? "No vision description available.";
+        if (_isUpdatingFields ||
+            ImageList.SelectedItem is not ImageFile imageFile)
+        {
+            return;
+        }
 
-        TitleText.Text =
-            imageFile.Metadata?.Title
-            ?? string.Empty;
-
-        KeywordsText.Text =
-            imageFile.Metadata is null
-                ? string.Empty
-                : string.Join(
-                    ", ",
-                    imageFile.Metadata.Keywords);
-
-        PrimaryCategoryComboBox.SelectedItem =
-            imageFile.Metadata?.Category;
-
-        SecondaryCategoryComboBox.SelectedItem =
-            imageFile.Metadata?.SecondaryCategory
-            ?? string.Empty;
+        imageFile.AdditionalInformation =
+            AdditionalInformationText.Text;
     }
 
     private void PrimaryCategoryComboBox_SelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
     {
-        if (ImageList.SelectedItem is not ImageFile imageFile ||
+        if (_isUpdatingFields ||
+            ImageList.SelectedItem is not ImageFile imageFile ||
             imageFile.Metadata is null ||
             PrimaryCategoryComboBox.SelectedItem is not string category)
         {
@@ -209,7 +179,8 @@ public MainWindow()
         object sender,
         SelectionChangedEventArgs e)
     {
-        if (ImageList.SelectedItem is not ImageFile imageFile ||
+        if (_isUpdatingFields ||
+            ImageList.SelectedItem is not ImageFile imageFile ||
             imageFile.Metadata is null)
         {
             return;
@@ -217,5 +188,191 @@ public MainWindow()
 
         imageFile.Metadata.SecondaryCategory =
             SecondaryCategoryComboBox.SelectedItem as string;
+    }
+
+    private async void AnalyzeAllNew_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_isProcessing)
+        {
+            return;
+        }
+
+        var images = ImageList.Items
+            .Cast<ImageFile>()
+            .Where(image =>
+                image.Status == ImageStatus.Open ||
+                image.Status == ImageStatus.Error)
+            .ToList();
+
+        await ProcessImagesAsync(
+            images,
+            "No new images to analyze.");
+    }
+
+    private async void AnalyzeSelected_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_isProcessing)
+        {
+            return;
+        }
+
+        var images = ImageList.SelectedItems
+            .Cast<ImageFile>()
+            .ToList();
+
+        await ProcessImagesAsync(
+            images,
+            "Please select one or more images first.");
+    }
+
+    private async Task ProcessImagesAsync(
+        IReadOnlyList<ImageFile> images,
+        string emptyMessage)
+    {
+        if (images.Count == 0)
+        {
+            OllamaStatusText.Text = emptyMessage;
+            return;
+        }
+
+        _isProcessing = true;
+
+        var succeeded = 0;
+        var failed = 0;
+
+        ProcessingProgressBar.Minimum = 0;
+        ProcessingProgressBar.Maximum = images.Count;
+        ProcessingProgressBar.Value = 0;
+
+        try
+        {
+            for (var index = 0; index < images.Count; index++)
+            {
+                var imageFile = images[index];
+
+                OllamaStatusText.Text =
+                    $"Processing {index + 1} of {images.Count}: " +
+                    imageFile.FileName;
+
+                ProcessingProgressText.Text =
+                    $"{index + 1} / {images.Count}";
+
+                try
+                {
+                    await _imageProcessingService.ProcessAsync(
+                        imageFile,
+                        updatedImage =>
+                        {
+                            if (ReferenceEquals(
+                                ImageList.SelectedItem,
+                                updatedImage))
+                            {
+                                UpdateMetadataFields(updatedImage);
+                            }
+
+                            ImageList.Items.Refresh();
+                        });
+
+                    succeeded++;
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+
+                    // Keep processing the remaining images.
+                    System.Diagnostics.Debug.WriteLine(
+                        $"Failed to process {imageFile.FileName}: {ex.Message}");
+                }
+
+                ProcessingProgressBar.Value = index + 1;
+                ImageList.Items.Refresh();
+                UpdateImageCount();
+            }
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+
+        OllamaStatusText.Text =
+            $"Processing finished. Successful: {succeeded}, Failed: {failed}.";
+
+        ProcessingProgressText.Text =
+            $"Completed {images.Count} images.";
+    }
+
+    private void UpdateMetadataFields(ImageFile imageFile)
+    {
+        _isUpdatingFields = true;
+
+        try
+        {
+            VisionDescriptionText.Text =
+                imageFile.VisionDescription
+                ?? "No vision description available.";
+
+            AdditionalInformationText.Text =
+                imageFile.AdditionalInformation;
+
+            TitleText.Text =
+                imageFile.Metadata?.Title
+                ?? string.Empty;
+
+            KeywordsText.Text =
+                imageFile.Metadata is null
+                    ? string.Empty
+                    : string.Join(
+                        ", ",
+                        imageFile.Metadata.Keywords);
+
+            PrimaryCategoryComboBox.SelectedItem =
+                imageFile.Metadata?.Category;
+
+            SecondaryCategoryComboBox.SelectedItem =
+                imageFile.Metadata?.SecondaryCategory
+                ?? string.Empty;
+        }
+        finally
+        {
+            _isUpdatingFields = false;
+        }
+    }
+
+    private void ClearMetadataFields()
+    {
+        _isUpdatingFields = true;
+
+        try
+        {
+            ImagePreview.Source = null;
+            VisionDescriptionText.Clear();
+            AdditionalInformationText.Clear();
+            TitleText.Clear();
+            KeywordsText.Clear();
+            PrimaryCategoryComboBox.SelectedItem = null;
+            SecondaryCategoryComboBox.SelectedItem = string.Empty;
+        }
+        finally
+        {
+            _isUpdatingFields = false;
+        }
+    }
+
+    private void UpdateImageCount()
+    {
+        var total = ImageList.Items.Count;
+        var completed = ImageList.Items
+            .Cast<ImageFile>()
+            .Count(image => image.Status == ImageStatus.Review);
+        var failed = ImageList.Items
+            .Cast<ImageFile>()
+            .Count(image => image.Status == ImageStatus.Error);
+
+        ImageCountText.Text =
+            $"{total} images | {completed} reviewed | {failed} failed";
     }
 }

@@ -35,7 +35,8 @@ public class ImageProcessingService : IImageProcessingService
             imageFile.Metadata =
                 await _metadataGenerator.GenerateAsync(
                     imageFile.VisionDescription,
-                    cancellationToken);
+                    cancellationToken,
+                    imageFile.AdditionalInformation);
 
             imageFile.Status = ImageStatus.Review;
             progressCallback?.Invoke(imageFile);

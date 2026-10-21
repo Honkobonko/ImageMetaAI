@@ -285,11 +285,15 @@ public class ImageProcessingServiceTests
 
         public string? LastVisionDescription { get; private set; }
 
+        public string? LastAdditionalInformation { get; private set; }
+
         public Task<ImageMetadata> GenerateAsync(
             string visionDescription,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            string? additionalInformation = null)
         {
             LastVisionDescription = visionDescription;
+            LastAdditionalInformation = additionalInformation;
 
             if (Exception is not null)
             {

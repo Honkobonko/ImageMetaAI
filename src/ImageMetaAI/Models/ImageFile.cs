@@ -14,6 +14,8 @@ public class ImageFile
 
     public string? VisionDescription { get; set; }
 
+    public string AdditionalInformation { get; set; } = string.Empty;
+
     public ImageMetadata? Metadata { get; set; }
 
     public ImageFile(string filePath)

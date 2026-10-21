@@ -17,7 +17,8 @@ public class MetadataGenerator : IMetadataGenerator
 
     public async Task<ImageMetadata> GenerateAsync(
         string visionDescription,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? additionalInformation = null)
     {
         if (string.IsNullOrWhiteSpace(visionDescription))
         {
@@ -28,12 +29,11 @@ public class MetadataGenerator : IMetadataGenerator
 
         const string prompt = """
             Create accurate, searchable stock photography metadata
-            in English based only on the image description.
+            in English based on the image description.
 
             TITLE
             - Write a clear, specific, natural stock photo title.
             - Use at least 5 words.
-            - Describe the main subject and relevant visible context.
             - Avoid keyword lists, repetition, and unnecessary filler.
             - Do not exceed 2048 characters.
 
@@ -41,15 +41,13 @@ public class MetadataGenerator : IMetadataGenerator
             - Generate 20 to 30 distinct, relevant keywords.
             - Use individual words or concise phrases where appropriate.
             - Put the most important and specific keywords first.
-            - Prioritize the main subject, visible objects, actions,
-              setting, composition, and clearly supported concepts.
+            - Prioritize the main subject, objects, actions, setting,
+              composition, visual characteristics, and relevant concepts.
             - Avoid synonyms that add little meaning, repeated ideas,
               redundant variations, and generic filler.
-            - Every keyword must add useful search value.
-            - Do not include unsupported assumptions.
 
-            CATEGORY ANS SECONDARYCATEGORY
-            Choose the best category and, if useful, a different
+            SHUTTERSTOCK CATEGORIES
+            Choose the best primary category and, if useful, a different
             secondary category from this exact list:
             - Abstract
             - Animals/Wildlife
@@ -81,17 +79,17 @@ public class MetadataGenerator : IMetadataGenerator
             CATEGORY RULES
             - The primary category is required.
             - Choose the category that best represents the main subject.
-            - Use the secondary category only when it adds a meaningful,
-              distinct classification.
+            - Use a different secondary category only when useful.
             - Otherwise, set secondaryCategory to null.
-            - Never choose the same category twice.
             - Select only categories from the supplied list.
 
             ACCURACY
-            - Use only information supported by the image description.
+            - Use only information supported by the image description
+              or reliable user-provided additional information.
+            - Additional information may clarify context but does not
+              override clearly visible evidence.
             - Do not invent names, locations, brands, professions,
               events, or other details.
-            - If a detail is uncertain, leave it out.
 
             Return only the metadata matching the required JSON schema.
 
@@ -99,6 +97,12 @@ public class MetadataGenerator : IMetadataGenerator
             """;
 
         var fullPrompt = $"{prompt}\n{visionDescription}";
+
+        if (!string.IsNullOrWhiteSpace(additionalInformation))
+        {
+            fullPrompt +=
+                $"\n\nAdditional information provided by the user:\n{additionalInformation}";
+        }
 
         return await _ollamaClient.GenerateMetadataAsync(
             _modelSettings.MetadataModel,

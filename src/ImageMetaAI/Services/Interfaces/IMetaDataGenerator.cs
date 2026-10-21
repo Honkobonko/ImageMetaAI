@@ -6,5 +6,6 @@ public interface IMetadataGenerator
 {
     Task<ImageMetadata> GenerateAsync(
         string visionDescription,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        string? additionalInformation = null);
 }

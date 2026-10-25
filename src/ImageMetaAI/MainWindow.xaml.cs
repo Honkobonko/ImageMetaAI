@@ -566,7 +566,20 @@ public partial class MainWindow : Window
                 cancellationToken: _processingCancellationTokenSource.Token,
                 recognizeLocations:
                     RecognizeLocationsCheckBox.IsChecked == true,
-                platforms: selectedPlatforms);
+                platforms: selectedPlatforms,
+                errorCallback: (imageFile, ex) =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        System.Windows.MessageBox.Show(
+                            $"File: {imageFile.FileName}\n\n" +
+                            $"Error type: {ex.GetType().Name}\n\n" +
+                            $"Details:\n{ex}",
+                            "ImageMetaAI - Processing Error",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Error);
+                    });
+                });
         }
         catch (OperationCanceledException)
         {

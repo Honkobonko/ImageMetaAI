@@ -17,5 +17,6 @@ public interface IImageProcessingService
         Action<ProcessingPhase, int, int, string>? progressCallback = null,
         CancellationToken cancellationToken = default,
         bool recognizeLocations = false,
-        IReadOnlyCollection<MetadataPlatform>? platforms = null);
+        IReadOnlyCollection<MetadataPlatform>? platforms = null,
+        Action<ImageFile, Exception>? errorCallback = null);
 }

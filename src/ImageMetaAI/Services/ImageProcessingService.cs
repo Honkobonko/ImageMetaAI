@@ -77,7 +77,8 @@ public class ImageProcessingService : IImageProcessingService
         Action<ProcessingPhase, int, int, string>? progressCallback = null,
         CancellationToken cancellationToken = default,
         bool recognizeLocations = false,
-        IReadOnlyCollection<MetadataPlatform>? platforms = null)
+        IReadOnlyCollection<MetadataPlatform>? platforms = null,
+        Action<ImageFile, Exception>? errorCallback = null)
     {
         if (images.Count == 0)
         {
@@ -214,11 +215,13 @@ public class ImageProcessingService : IImageProcessingService
             }
             catch (Exception ex)
             {
-                imageFile.Status = ImageStatus.Error;
-                imageUpdated?.Invoke(imageFile);
+                 imageFile.Status = ImageStatus.Error;
+                    imageUpdated?.Invoke(imageFile);
 
-                System.Diagnostics.Debug.WriteLine(
-                    $"Metadata generation failed for {imageFile.FileName}: {ex}");
+                    System.Diagnostics.Debug.WriteLine(
+                        $"Metadata generation failed for {imageFile.FileName}:\n{ex}");
+
+                    errorCallback?.Invoke(imageFile, ex);
             }
             finally
             {

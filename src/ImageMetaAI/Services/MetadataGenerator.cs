@@ -27,82 +27,18 @@ public class MetadataGenerator : IMetadataGenerator
                 nameof(visionDescription));
         }
 
-        const string prompt = """
-            Create accurate, searchable stock photography metadata
-            in English based on the image description.
+        var prompt = PromptLoader.Load(
+            "ShutterstockMetadataPrompt.txt");
 
-            TITLE
-            - Write a clear, specific, natural stock photo title.
-            - Use at least 5 words.
-            - Avoid keyword lists, repetition, and unnecessary filler.
-            - Do not exceed 2048 characters.
-
-            KEYWORDS
-            - Generate 20 to 30 distinct, relevant keywords.
-            - Use individual words or concise phrases where appropriate.
-            - Put the most important and specific keywords first.
-            - Prioritize the main subject, objects, actions, setting,
-              composition, visual characteristics, and relevant concepts.
-            - Avoid synonyms that add little meaning, repeated ideas,
-              redundant variations, and generic filler.
-
-            SHUTTERSTOCK CATEGORIES
-            Choose the best primary category and, if useful, a different
-            secondary category from this exact list:
-            - Abstract
-            - Animals/Wildlife
-            - Arts
-            - Backgrounds/Textures
-            - Beauty/Fashion
-            - Buildings/Landmarks
-            - Business/Finance
-            - Celebrities
-            - Education
-            - Food and Drink
-            - Healthcare/Medical
-            - Holidays
-            - Industrial
-            - Interiors
-            - Miscellaneous
-            - Nature
-            - Objects
-            - Parks/Outdoor
-            - People
-            - Religion
-            - Science
-            - Signs/Symbols
-            - Sports/Recreation
-            - Technology
-            - Transportation
-            - Vintage
-
-            CATEGORY RULES
-            - The primary category is required.
-            - Choose the category that best represents the main subject.
-            - Use a different secondary category only when useful.
-            - Otherwise, set secondaryCategory to null.
-            - Select only categories from the supplied list.
-
-            ACCURACY
-            - Use only information supported by the image description
-              or reliable user-provided additional information.
-            - Additional information may clarify context but does not
-              override clearly visible evidence.
-            - Do not invent names, locations, brands, professions,
-              events, or other details.
-
-            Return only the metadata matching the required JSON schema.
-
-            Image description:
-            """;
-
-        var fullPrompt = $"{prompt}\n{visionDescription}";
-
-        if (!string.IsNullOrWhiteSpace(additionalInformation))
-        {
-            fullPrompt +=
-                $"\n\nAdditional information provided by the user:\n{additionalInformation}";
-        }
+        var fullPrompt = prompt
+            .Replace(
+                "{{IMAGE_DESCRIPTION}}",
+                visionDescription)
+            .Replace(
+                "{{ADDITIONAL_INFORMATION}}",
+                string.IsNullOrWhiteSpace(additionalInformation)
+                    ? "None provided."
+                    : additionalInformation);
 
         return await _ollamaClient.GenerateMetadataAsync(
             _modelSettings.MetadataModel,

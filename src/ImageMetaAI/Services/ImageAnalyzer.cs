@@ -5,17 +5,19 @@ namespace ImageMetaAI.Services;
 public class ImageAnalyzer : IImageAnalyzer
 {
     private readonly OllamaModelSettings _modelSettings;
-
     private readonly IOllamaClient _ollamaClient;
 
-    public ImageAnalyzer(IOllamaClient ollamaClient, OllamaModelSettings modelSettings)
+    public ImageAnalyzer(
+        IOllamaClient ollamaClient,
+        OllamaModelSettings modelSettings)
     {
         _ollamaClient = ollamaClient;
         _modelSettings = modelSettings;
-
     }
 
-    public async Task<string> AnalyzeAsync(string imagePath, CancellationToken cancellationToken = default)
+    public async Task<string> AnalyzeAsync(
+        string imagePath,
+        CancellationToken cancellationToken = default)
     {
         if (!File.Exists(imagePath))
         {
@@ -30,12 +32,7 @@ public class ImageAnalyzer : IImageAnalyzer
 
         var imageBase64 = Convert.ToBase64String(imageBytes);
 
-        const string prompt = """
-            Analyze the image and describe what is visibly shown.
-            Provide a concise and factual description suitable for stock photography metadata.
-            Do not guess names, professions, locations, brands, or other facts
-            that cannot be reliably determined from the image.
-            """;
+        var prompt = PromptLoader.Load("ImageAnalysisPrompt.txt");
 
         var response = await _ollamaClient.GenerateVisionAsync(
             _modelSettings.VisionModel,

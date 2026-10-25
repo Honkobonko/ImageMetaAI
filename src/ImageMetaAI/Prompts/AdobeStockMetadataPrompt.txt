@@ -1,0 +1,8 @@
+Create accurate, searchable stock photography metadata
+for Adobe Stock in English.
+
+Image description:
+{{IMAGE_DESCRIPTION}}
+
+Additional information provided by the user:
+{{ADDITIONAL_INFORMATION}}

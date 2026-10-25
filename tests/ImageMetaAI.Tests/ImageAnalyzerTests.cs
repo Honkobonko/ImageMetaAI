@@ -105,6 +105,45 @@ public class ImageAnalyzerTests
             File.Delete(imagePath);
         }
     }
+    
+    [Fact]
+    public async Task AnalyzeAsync_LoadsPromptFromTextFile()
+    {
+        var imagePath = CreateTempImage();
+
+        try
+        {
+            var client = new FakeOllamaClient
+            {
+                Response = "Test image description."
+            };
+
+            var modelSettings = new OllamaModelSettings
+            {
+                VisionModel = "test-vision-model",
+                MetadataModel = "test-metadata-model"
+            };
+
+            var analyzer = new ImageAnalyzer(
+                client,
+                modelSettings);
+
+            await analyzer.AnalyzeAsync(imagePath);
+
+            Assert.Contains(
+                "Analyze the image",
+                client.Prompt);
+
+            Assert.Contains(
+                "visibly shown",
+                client.Prompt);
+        }
+        finally
+        {
+            File.Delete(imagePath);
+        }
+    }
+
 
     private static string CreateTempImage()
     {

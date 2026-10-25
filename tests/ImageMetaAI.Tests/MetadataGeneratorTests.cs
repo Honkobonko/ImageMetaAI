@@ -101,6 +101,64 @@ public class MetadataGeneratorTests
             result);
     }
 
+    [Fact]
+    public async Task GenerateAsync_ReplacesImageDescriptionPlaceholder()
+    {
+        var client = new FakeOllamaClient();
+
+        var generator = new MetadataGenerator(
+            client,
+            CreateModelSettings());
+
+        const string description = "A mountain landscape with a lake.";
+
+        await generator.GenerateAsync(description);
+
+        Assert.Contains(description, client.LastPrompt);
+        Assert.DoesNotContain(
+            "{{IMAGE_DESCRIPTION}}",
+            client.LastPrompt);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_IncludesAdditionalInformation()
+    {
+        var client = new FakeOllamaClient();
+
+        var generator = new MetadataGenerator(
+            client,
+            CreateModelSettings());
+
+        const string additionalInformation = "Location: Bavaria, Germany";
+
+        await generator.GenerateAsync(
+            "A mountain landscape.",
+            additionalInformation: additionalInformation);
+
+        Assert.Contains(additionalInformation, client.LastPrompt);
+        Assert.DoesNotContain(
+            "{{ADDITIONAL_INFORMATION}}",
+            client.LastPrompt);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_UsesFallback_WhenAdditionalInformationIsEmpty()
+    {
+        var client = new FakeOllamaClient();
+
+        var generator = new MetadataGenerator(
+            client,
+            CreateModelSettings());
+
+        await generator.GenerateAsync(
+            "A mountain landscape.");
+
+        Assert.Contains("None provided.", client.LastPrompt);
+        Assert.DoesNotContain(
+            "{{ADDITIONAL_INFORMATION}}",
+            client.LastPrompt);
+    }
+
     private static OllamaModelSettings CreateModelSettings()
     {
         return new OllamaModelSettings

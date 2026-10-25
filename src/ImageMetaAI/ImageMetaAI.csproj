@@ -13,4 +13,10 @@
     <PackageReference Include="MetadataExtractor" Version="2.9.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Prompts\*.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

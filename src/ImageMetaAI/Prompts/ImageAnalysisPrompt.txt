@@ -1,0 +1,4 @@
+Analyze the image and describe what is visibly shown.
+Provide a concise and factual description suitable for stock photography metadata.
+Do not guess names, professions, locations, brands, or other facts
+that cannot be reliably determined from the image.

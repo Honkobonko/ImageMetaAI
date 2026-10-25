@@ -2,6 +2,8 @@
 
 Local AI-powered image analysis and metadata generation for Shutterstock and Adobe Stock.
 
+![ImageMetaAI main window](docs/images/ImageMetaAI.png)
+
 ## Table of Contents
 
 - [Overview](#overview)

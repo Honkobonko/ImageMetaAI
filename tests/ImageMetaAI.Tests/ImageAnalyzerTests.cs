@@ -196,6 +196,7 @@ public class ImageAnalyzerTests
         public Task<ImageMetadata> GenerateMetadataAsync(
             string model,
             string prompt,
+            MetadataPlatform platform,
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(new ImageMetadata());

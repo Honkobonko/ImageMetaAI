@@ -103,8 +103,27 @@ public class OllamaClient : IOllamaClient
     public async Task<ImageMetadata> GenerateMetadataAsync(
         string model,
         string prompt,
+        MetadataPlatform platform,
         CancellationToken cancellationToken = default)
     {
+        var allowedCategories = platform switch
+        {
+            MetadataPlatform.Shutterstock =>
+                ShutterstockCategories.All
+                    .Cast<string>()
+                    .ToArray(),
+
+            MetadataPlatform.AdobeStock =>
+                AdobeStockCategories.All
+                    .Select(category => category.Name)
+                    .ToArray(),
+
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(platform),
+                platform,
+                "Unsupported metadata platform.")
+        };
+
         var request = new OllamaChatRequest
         {
             Model = model,
@@ -132,7 +151,7 @@ public class OllamaClient : IOllamaClient
                     category = new
                     {
                         type = "string",
-                        @enum = ShutterstockCategories.All
+                        @enum = allowedCategories
                     },
                     secondaryCategory = new
                     {
@@ -141,7 +160,7 @@ public class OllamaClient : IOllamaClient
                             "string",
                             "null"
                         },
-                        @enum = ShutterstockCategories.All
+                        @enum = allowedCategories
                             .Cast<string?>()
                             .Prepend(null)
                             .ToArray()

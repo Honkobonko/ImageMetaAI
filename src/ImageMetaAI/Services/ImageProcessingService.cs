@@ -8,10 +8,10 @@ public class ImageProcessingService : IImageProcessingService
     private readonly IMetadataGenerator _metadataGenerator;
     private readonly NominatimLocationService _locationService;
 
-   public ImageProcessingService(
-    IImageAnalyzer imageAnalyzer,
-    IMetadataGenerator metadataGenerator,
-    NominatimLocationService? locationService = null)
+    public ImageProcessingService(
+        IImageAnalyzer imageAnalyzer,
+        IMetadataGenerator metadataGenerator,
+        NominatimLocationService? locationService = null)
     {
         _imageAnalyzer = imageAnalyzer;
         _metadataGenerator = metadataGenerator;
@@ -22,8 +22,19 @@ public class ImageProcessingService : IImageProcessingService
         ImageFile imageFile,
         Action<ImageFile>? progressCallback = null,
         CancellationToken cancellationToken = default,
-        bool recognizeLocations = false)
+        bool recognizeLocations = false,
+        IReadOnlyCollection<MetadataPlatform>? platforms = null)
     {
+        var selectedPlatforms = platforms?.Distinct().ToArray()
+            ?? [MetadataPlatform.Shutterstock];
+
+        if (selectedPlatforms.Length == 0)
+        {
+            throw new ArgumentException(
+                "Select at least one metadata platform.",
+                nameof(platforms));
+        }
+
         imageFile.Status = ImageStatus.Processing;
         progressCallback?.Invoke(imageFile);
 
@@ -35,10 +46,14 @@ public class ImageProcessingService : IImageProcessingService
                     cancellationToken);
 
             progressCallback?.Invoke(imageFile);
-
+            
             var additionalInformation = imageFile.AdditionalInformation;
 
-           if (recognizeLocations && imageFile.GpsCoordinates is not null && _locationService is not null)
+            // Resolve the GPS location only when no location has been entered.
+            if (recognizeLocations &&
+                imageFile.GpsCoordinates is not null &&
+                !imageFile.IsLocationManuallyEdited &&
+                string.IsNullOrWhiteSpace(imageFile.ResolvedLocation))
             {
                 try
                 {
@@ -48,27 +63,18 @@ public class ImageProcessingService : IImageProcessingService
 
                     if (!string.IsNullOrWhiteSpace(location))
                     {
-                        const string locationPrefix =
-                            "GPS location identified by reverse geocoding: ";
-
-                        // Remove a previous automatically added location.
-                        var existingLines = imageFile.AdditionalInformation
-                            .Split('\n')
-                            .Where(line => !line.TrimStart().StartsWith(
-                                locationPrefix,
-                                StringComparison.OrdinalIgnoreCase));
-
-                        var userInformation = string.Join(
-                            "\n",
-                            existingLines).Trim();
-
-                        imageFile.AdditionalInformation =
-                            string.IsNullOrWhiteSpace(userInformation)
-                                ? $"{locationPrefix}{location}"
-                                : $"{userInformation}\n{locationPrefix}{location}";
-
-                        additionalInformation = imageFile.AdditionalInformation;
-                        progressCallback?.Invoke(imageFile);
+                        // Do not replace a location that was edited while awaiting the lookup.
+                        if (!imageFile.IsLocationManuallyEdited &&
+                            string.IsNullOrWhiteSpace(imageFile.ResolvedLocation))
+                        {
+                            imageFile.ResolvedLocation = location;
+                            imageFile.LocationStatus = LocationLookupStatus.Found;
+                            progressCallback?.Invoke(imageFile);
+                        }
+                    }
+                    else
+                    {
+                        imageFile.LocationStatus = LocationLookupStatus.NotFound;
                     }
                 }
                 catch (OperationCanceledException)
@@ -77,20 +83,73 @@ public class ImageProcessingService : IImageProcessingService
                 }
                 catch (Exception ex)
                 {
-                    // Location lookup is optional.
+                    imageFile.LocationStatus = LocationLookupStatus.Failed;
+
                     System.Diagnostics.Debug.WriteLine(
                         $"Location lookup failed for {imageFile.FileName}: {ex.Message}");
                 }
             }
+            else if (recognizeLocations &&
+                    imageFile.GpsCoordinates is null)
+            {
+                imageFile.LocationStatus = LocationLookupStatus.NoGpsData;
+            }
 
-            imageFile.Metadata =
-                await _metadataGenerator.GenerateAsync(
-                    imageFile.VisionDescription,
+            // Include the current location in metadata generation.
+            if (!string.IsNullOrWhiteSpace(imageFile.ResolvedLocation))
+            {
+                additionalInformation = string.IsNullOrWhiteSpace(additionalInformation)
+                    ? $"Location: {imageFile.ResolvedLocation}"
+                    : $"{additionalInformation}\nLocation: {imageFile.ResolvedLocation}";
+            }
+
+            foreach (var platform in selectedPlatforms)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var metadataInformation = additionalInformation;
+
+                if (!string.IsNullOrWhiteSpace(imageFile.ResolvedLocation))
+                {
+                    metadataInformation = string.IsNullOrWhiteSpace(metadataInformation)
+                        ? $"Location: {imageFile.ResolvedLocation}"
+                        : $"{metadataInformation}\nLocation: {imageFile.ResolvedLocation}";
+                }
+
+                var metadata = await _metadataGenerator.GenerateAsync(
+                    imageFile.VisionDescription!,
+                    platform,
                     cancellationToken,
-                    additionalInformation);
+                    metadataInformation);
+
+                switch (platform)
+                {
+                    case MetadataPlatform.Shutterstock:
+                        imageFile.ShutterstockMetadata = metadata;
+                        break;
+
+                    case MetadataPlatform.AdobeStock:
+                        imageFile.AdobeStockMetadata = metadata;
+                        break;
+
+                    default:
+                        throw new ArgumentOutOfRangeException(
+                            nameof(platforms),
+                            platform,
+                            "Unsupported metadata platform.");
+                }
+
+                progressCallback?.Invoke(imageFile);
+            }
 
             imageFile.Status = ImageStatus.Review;
             progressCallback?.Invoke(imageFile);
+        }
+        catch (OperationCanceledException)
+        {
+            imageFile.Status = ImageStatus.Cancelled;
+            progressCallback?.Invoke(imageFile);
+            throw;
         }
         catch
         {

@@ -16,6 +16,12 @@ public class ImageFile
 
     public string AdditionalInformation { get; set; } = string.Empty;
 
+    // Platform-specific metadata
+    public ImageMetadata? ShutterstockMetadata { get; set; }
+
+    public ImageMetadata? AdobeStockMetadata { get; set; }
+
+    // Legacy property retained while existing code is migrated
     public ImageMetadata? Metadata { get; set; }
 
     public GpsCoordinates? GpsCoordinates { get; set; }
@@ -27,6 +33,8 @@ public class ImageFile
     public LocationLookupStatus LocationStatus { get; set; } =
         LocationLookupStatus.NotAttempted;
 
+    public bool IsLocationManuallyEdited { get; set; }
+
     public string DisplayStatus
     {
         get
@@ -36,6 +44,9 @@ public class ImageFile
 
             if (Status == ImageStatus.Processing)
                 return "Analyzing...";
+
+            if (Status == ImageStatus.Cancelled)
+                return "Cancelled";
 
             if (Status == ImageStatus.Open)
                 return "Ready";

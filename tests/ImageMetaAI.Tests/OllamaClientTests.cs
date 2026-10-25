@@ -1,4 +1,5 @@
 using System.Net;
+using ImageMetaAI.Models;
 using ImageMetaAI.Services;
 
 namespace ImageMetaAI.Tests;
@@ -256,7 +257,8 @@ public class OllamaClientTests
 
         var result = await client.GenerateMetadataAsync(
             "test-metadata-model",
-            "Create metadata from this description.");
+            "Create metadata from this description.",
+            MetadataPlatform.Shutterstock);
 
         Assert.Equal(
             "Freshly baked bread",
@@ -283,7 +285,8 @@ public class OllamaClientTests
         await Assert.ThrowsAsync<HttpRequestException>(
             () => client.GenerateMetadataAsync(
                 "test-metadata-model",
-                "Create metadata from this description."));
+                "Create metadata from this description.",
+                MetadataPlatform.Shutterstock));
     }
 
     [Fact]
@@ -312,7 +315,8 @@ public class OllamaClientTests
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => client.GenerateMetadataAsync(
                 "test-metadata-model",
-                "Create metadata from this description."));
+                "Create metadata from this description.",
+                MetadataPlatform.Shutterstock));
     }
 
     [Fact]
@@ -340,7 +344,8 @@ public class OllamaClientTests
 
         await client.GenerateMetadataAsync(
             "test-metadata-model",
-            "Create metadata from this description.");
+            "Create metadata from this description.",
+            MetadataPlatform.Shutterstock);
 
         Assert.NotNull(handler.LastRequestContent);
 
@@ -348,6 +353,269 @@ public class OllamaClientTests
             "\"images\"",
             handler.LastRequestContent);
     }
+
+    
+    [Fact]
+    public async Task GenerateMetadataAsync_UsesAdobeStockCategories_WhenPlatformIsAdobeStock()
+    {
+        const string json = """
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": "{\"title\":\"Mountain landscape\",\"keywords\":[\"mountain\"]}"
+                }
+            }
+            """;
+
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.OK,
+            json);
+
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+
+        var client = new OllamaClient(httpClient);
+
+        await client.GenerateMetadataAsync(
+            "test-metadata-model",
+            "Create Adobe Stock metadata.",
+            MetadataPlatform.AdobeStock);
+
+        Assert.NotNull(handler.LastRequestContent);
+
+        using var document = System.Text.Json.JsonDocument.Parse(
+            handler.LastRequestContent);
+
+        var format = document.RootElement.GetProperty("format");
+        var properties = format.GetProperty("properties");
+        var category = properties.GetProperty("category");
+        var categoryEnum = category.GetProperty("enum");
+
+        var actualCategories = categoryEnum
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+
+        var expectedCategories = AdobeStockCategories.All
+            .Select(item => item.Name)
+            .ToArray();
+
+        Assert.Equal(expectedCategories, actualCategories);
+        Assert.Contains("Landscapes", actualCategories);
+        Assert.DoesNotContain("Nature", actualCategories);
+    }
+
+    [Fact]
+    public async Task GenerateMetadataAsync_UsesShutterstockCategories_WhenPlatformIsShutterstock()
+    {
+        const string json = """
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": "{\"title\":\"Mountain landscape\",\"keywords\":[\"mountain\"]}"
+                }
+            }
+            """;
+
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.OK,
+            json);
+
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+
+        var client = new OllamaClient(httpClient);
+
+        await client.GenerateMetadataAsync(
+            "test-metadata-model",
+            "Create Shutterstock metadata.",
+            MetadataPlatform.Shutterstock);
+
+        Assert.NotNull(handler.LastRequestContent);
+
+        using var document = System.Text.Json.JsonDocument.Parse(
+            handler.LastRequestContent);
+
+        var properties = document.RootElement
+            .GetProperty("format")
+            .GetProperty("properties");
+
+        var actualCategories = properties
+            .GetProperty("category")
+            .GetProperty("enum")
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+
+        var expectedCategories = ShutterstockCategories.All
+            .Cast<string>()
+            .ToArray();
+
+        Assert.Equal(expectedCategories, actualCategories);
+        Assert.Contains("Nature", actualCategories);
+    }
+
+    [Fact]
+    public async Task GenerateMetadataAsync_Throws_WhenPlatformIsUnsupported()
+    {
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.OK,
+            """{"message":{"role":"assistant","content":"{}"}}""");
+
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+
+        var client = new OllamaClient(httpClient);
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => client.GenerateMetadataAsync(
+                "test-metadata-model",
+                "Create metadata.",
+                (MetadataPlatform)999));
+
+        Assert.Null(handler.LastRequest);
+    }
+
+
+    [Fact]
+    public async Task GenerateMetadataAsync_AllowsNullSecondaryCategory_ForAdobeStock()
+    {
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.OK,
+            """{"message":{"role":"assistant","content":"{\"title\":\"Mountain landscape\",\"keywords\":[\"mountain\"]}"}}""");
+
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+
+        var client = new OllamaClient(httpClient);
+
+        await client.GenerateMetadataAsync(
+            "test-metadata-model",
+            "Create Adobe Stock metadata.",
+            MetadataPlatform.AdobeStock);
+
+        using var document = System.Text.Json.JsonDocument.Parse(
+            handler.LastRequestContent!);
+
+        var secondaryCategory = document.RootElement
+            .GetProperty("format")
+            .GetProperty("properties")
+            .GetProperty("secondaryCategory");
+
+        Assert.Contains(
+            secondaryCategory.GetProperty("type")
+                .EnumerateArray()
+                .Select(item => item.GetString()),
+            type => type == "null");
+
+        var allowedValues = secondaryCategory
+            .GetProperty("enum")
+            .EnumerateArray()
+            .Select(item => item.ValueKind ==
+                System.Text.Json.JsonValueKind.Null
+                    ? null
+                    : item.GetString())
+            .ToArray();
+
+        Assert.Contains(null, allowedValues);
+        Assert.Contains("Landscapes", allowedValues);
+        Assert.DoesNotContain("Nature", allowedValues);
+    }
+
+    [Fact]
+    public async Task GenerateMetadataAsync_AllowsNullSecondaryCategory_ForShutterstock()
+    {
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.OK,
+            """{"message":{"role":"assistant","content":"{\"title\":\"Mountain landscape\",\"keywords\":[\"mountain\"]}"}}""");
+
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+
+        var client = new OllamaClient(httpClient);
+
+        await client.GenerateMetadataAsync(
+            "test-metadata-model",
+            "Create Shutterstock metadata.",
+            MetadataPlatform.Shutterstock);
+
+        using var document = System.Text.Json.JsonDocument.Parse(
+            handler.LastRequestContent!);
+
+        var secondaryCategory = document.RootElement
+            .GetProperty("format")
+            .GetProperty("properties")
+            .GetProperty("secondaryCategory");
+
+        var allowedValues = secondaryCategory
+            .GetProperty("enum")
+            .EnumerateArray()
+            .Select(item => item.ValueKind ==
+                System.Text.Json.JsonValueKind.Null
+                    ? null
+                    : item.GetString())
+            .ToArray();
+
+        Assert.Contains(null, allowedValues);
+        Assert.Contains("Nature", allowedValues);
+    }
+
+    [Fact]
+    public async Task GenerateMetadataAsync_SendsExpectedRequestOptions()
+    {
+        const string model = "test-metadata-model";
+        const string prompt = "Create stock metadata.";
+
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.OK,
+            """{"message":{"role":"assistant","content":"{\"title\":\"Mountain landscape\",\"keywords\":[\"mountain\"]}"}}""");
+
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+
+        var client = new OllamaClient(httpClient);
+
+        await client.GenerateMetadataAsync(
+            model,
+            prompt,
+            MetadataPlatform.AdobeStock);
+
+        using var document = System.Text.Json.JsonDocument.Parse(
+            handler.LastRequestContent!);
+
+        var root = document.RootElement;
+
+        Assert.Equal(
+            model,
+            root.GetProperty("model").GetString());
+
+        Assert.False(root.GetProperty("stream").GetBoolean());
+
+        Assert.Equal(
+            prompt,
+            root.GetProperty("messages")[0]
+                .GetProperty("content")
+                .GetString());
+
+        var options = root.GetProperty("options");
+
+        Assert.Equal(8192, options.GetProperty("num_ctx").GetInt32());
+        Assert.Equal(0, options.GetProperty("temperature").GetDouble());
+        Assert.Equal(512, options.GetProperty("num_predict").GetInt32());
+    }
+
 
     private sealed class FakeHttpMessageHandler : HttpMessageHandler
     {

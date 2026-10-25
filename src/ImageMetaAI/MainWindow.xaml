@@ -13,47 +13,51 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Folder selection and processing -->
         <WrapPanel Grid.Row="0" Margin="0,0,0,12">
-            <Button Content="Select Folder..."
-                    Width="130"
-                    Height="34"
+            <Button x:Name="SelectFolderButton"
+                    Content="Select Folder..."
+                    Width="130" Height="34"
                     Margin="0,0,8,0"
                     Click="SelectFolder_Click"/>
 
-            <Button Content="Analyze All New"
-                    Width="140"
-                    Height="34"
+            <Button x:Name="AnalyzeAllButton"
+                    Content="Analyze All"
+                    Width="140" Height="34"
                     Margin="0,0,8,0"
-                    Click="AnalyzeAllNew_Click"/>
+                    Click="AnalyzeAll_Click"/>
 
-            <Button Content="Analyze Selected"
-                    Width="150"
-                    Height="34"
+            <Button x:Name="AnalyzeSelectedButton"
+                    Content="Analyze Selected"
+                    Width="150" Height="34"
                     Margin="0,0,8,0"
                     Click="AnalyzeSelected_Click"/>
 
+            <Button x:Name="CancelProcessingButton"
+                    Content="Cancel Processing"
+                    Width="150" Height="34"
+                    Margin="0,0,8,0"
+                    IsEnabled="False"
+                    Click="CancelProcessing_Click"/>
+
             <Button x:Name="ExportCsvButton"
-                    Content="Export Shutterstock CSV"
-                    Width="190"
-                    Height="34"
+                    Content="Export CSV"
+                    Width="190" Height="34"
                     Margin="0,0,8,0"
                     IsEnabled="False"
                     Click="ExportCsv_Click"/>
         </WrapPanel>
 
-        <!-- Selected folder -->
         <Border Grid.Row="1"
-                Background="#F0F4F8"
-                BorderBrush="#CCD6E0"
+                Background="#F5F6F7"
+                BorderBrush="#D5D9DE"
                 BorderThickness="1"
                 CornerRadius="6"
                 Padding="12"
                 Margin="0,0,0,10">
-
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -62,10 +66,9 @@
                 </Grid.ColumnDefinitions>
 
                 <Border Grid.Column="0"
-                        Background="#DCE8F5"
+                        Background="#E7E9EC"
                         CornerRadius="5"
-                        Width="44"
-                        Height="44"
+                        Width="44" Height="44"
                         Margin="0,0,12,0">
                     <TextBlock Text="📁"
                                FontSize="23"
@@ -75,7 +78,6 @@
 
                 <StackPanel Grid.Column="1"
                             VerticalAlignment="Center">
-
                     <TextBlock Text="SELECTED IMAGE FOLDER"
                                FontSize="11"
                                FontWeight="Bold"
@@ -99,15 +101,13 @@
 
                 <Button Grid.Column="2"
                         Content="Open Folder"
-                        Width="110"
-                        Height="34"
+                        Width="110" Height="34"
                         Margin="12,0,0,0"
                         VerticalAlignment="Center"
                         Click="OpenFolder_Click"/>
             </Grid>
         </Border>
 
-        <!-- Status and progress -->
         <StackPanel Grid.Row="2" Margin="0,0,0,10">
             <TextBlock x:Name="OllamaStatusText"
                        Text="Checking Ollama..."
@@ -126,30 +126,57 @@
                        Margin="0,3,0,0"/>
         </StackPanel>
 
-        <!-- Location recognition -->
         <StackPanel Grid.Row="3"
-            Orientation="Horizontal"
-            Margin="0,0,0,10">
+                    Orientation="Horizontal"
+                    Margin="0,0,0,8">
             <CheckBox x:Name="RecognizeLocationsCheckBox"
-                    Content="Recognize locations from GPS (🌍)"
-                    IsChecked="True"
-                    VerticalAlignment="Center"
-                    ToolTip="Resolve GPS coordinates online and use the location as AI context."/>
+                      Content="Recognize locations from GPS"
+                      IsChecked="True"
+                      VerticalAlignment="Center"
+                      ToolTip="When enabled, GPS coordinates are used to look up a location online. The location can also be used as context for metadata generation."/>
         </StackPanel>
 
-        <!-- Main content -->
-        <Grid Grid.Row="4">
+        <Border Grid.Row="4"
+                BorderBrush="#D5D9DE"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="10"
+                Margin="0,0,0,10">
+            <StackPanel>
+                <TextBlock Text="METADATA PLATFORMS"
+                           FontWeight="Bold"
+                           FontSize="11"
+                           Foreground="#526579"
+                           Margin="0,0,0,8"/>
+
+                <WrapPanel>
+                    <CheckBox x:Name="ShutterstockMetadataCheckBox"
+                              Content="Shutterstock metadata"
+                              IsChecked="True"
+                              Margin="0,0,20,6"
+                              VerticalAlignment="Center"
+                              ToolTip="Generate a Shutterstock-specific title, keywords and categories."/>
+
+                    <CheckBox x:Name="AdobeStockMetadataCheckBox"
+                              Content="Adobe Stock metadata"
+                              IsChecked="True"
+                              Margin="0,0,20,6"
+                              VerticalAlignment="Center"
+                              ToolTip="Generate an Adobe Stock-specific title, keywords and category."/>
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="5">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="300"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Image list -->
             <ListBox x:Name="ImageList"
                      Grid.Column="0"
                      SelectionMode="Extended"
                      SelectionChanged="ImageList_SelectionChanged">
-
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <Grid Margin="5">
@@ -161,21 +188,21 @@
                             <StackPanel Grid.Row="0"
                                         Orientation="Horizontal">
                                 <TextBlock Text="{Binding FileName}"
-                                        FontWeight="SemiBold"
-                                        TextTrimming="CharacterEllipsis"
-                                        VerticalAlignment="Center"/>
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Center"/>
 
                                 <TextBlock Text="🌍"
-                                        FontSize="13"
-                                        Margin="6,0,0,0"
-                                        VerticalAlignment="Center"
-                                        ToolTip="GPS coordinates available">
+                                           FontSize="13"
+                                           Margin="6,0,0,0"
+                                           VerticalAlignment="Center"
+                                           ToolTip="GPS coordinates available">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding HasGpsCoordinates}"
-                                                            Value="True">
+                                                             Value="True">
                                                     <Setter Property="Visibility" Value="Visible"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
@@ -185,7 +212,7 @@
                             </StackPanel>
 
                             <TextBlock Grid.Row="1"
-                                       Text="{Binding Status}"
+                                       Text="{Binding DisplayStatus}"
                                        FontSize="12"
                                        Foreground="Gray"/>
                         </Grid>
@@ -193,86 +220,226 @@
                 </ListBox.ItemTemplate>
             </ListBox>
 
-            <!-- Selected image details -->
             <ScrollViewer Grid.Column="1"
                           Margin="15,0,0,0"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
-
                 <StackPanel>
-                    <!-- Image preview -->
-                    <Border BorderBrush="Gray"
+                    <Border BorderBrush="#D5D9DE"
                             BorderThickness="1"
                             Height="260">
-
                         <Image x:Name="ImagePreview"
                                Stretch="Uniform"/>
                     </Border>
 
-                    <!-- Vision description -->
                     <GroupBox Header="Vision Description"
                               Margin="0,10,0,0">
-                        <TextBox x:Name="VisionDescriptionText"
-                                 IsReadOnly="True"
-                                 TextWrapping="Wrap"
-                                 VerticalScrollBarVisibility="Auto"
-                                 MinHeight="80"
-                                 MaxHeight="140"
-                                 Padding="8"/>
+                        <StackPanel Margin="8">
+                            <TextBlock Text="AI-generated description of the image."
+                                       Foreground="Gray"
+                                       FontSize="12"
+                                       Margin="0,0,0,6"/>
+                            <TextBox x:Name="VisionDescriptionText"
+                                     IsReadOnly="True"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     MinHeight="80"
+                                     MaxHeight="140"
+                                     Padding="8"
+                                     Background="#F5F6F7"
+                                     BorderBrush="#D5D9DE"/>
+                        </StackPanel>
                     </GroupBox>
 
-                    <!-- Additional information -->
+                    <GroupBox Header="Location"
+                              Margin="0,10,0,0">
+                        <StackPanel Margin="8">
+                            <TextBlock Text="Enter or correct the location for this image."
+                                       Foreground="Gray"
+                                       FontSize="12"
+                                       Margin="0,0,0,6"/>
+
+                            <TextBox x:Name="LocationText"
+                                     TextChanged="LocationText_TextChanged"
+                                     TextWrapping="Wrap"
+                                     MinHeight="38"
+                                     MaxHeight="70"
+                                     Padding="8"
+                                     ToolTip="A manually entered location takes precedence over automatic lookup. Clear the field to allow GPS lookup during analysis."/>
+
+                            <TextBlock x:Name="LocationStatusText"
+                                       Text="Location has not been resolved yet."
+                                       Foreground="Gray"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </GroupBox>
+
                     <GroupBox Header="Additional Information"
                               Margin="0,10,0,0">
-                        <TextBox x:Name="AdditionalInformationText"
-                                 TextWrapping="Wrap"
-                                 AcceptsReturn="True"
-                                 VerticalScrollBarVisibility="Auto"
-                                 MinHeight="65"
-                                 MaxHeight="120"
-                                 Padding="8"
-                                 TextChanged="AdditionalInformationText_TextChanged"
-                                 ToolTip="Optional context or details to guide metadata generation."/>
+                        <StackPanel Margin="8">
+                            <TextBlock Text="Optional context for the AI, such as subject details, setting, purpose or relevant background."
+                                       Foreground="Gray"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,6"/>
+
+                            <TextBox x:Name="AdditionalInformationText"
+                                     TextWrapping="Wrap"
+                                     AcceptsReturn="True"
+                                     VerticalScrollBarVisibility="Auto"
+                                     MinHeight="65"
+                                     MaxHeight="120"
+                                     Padding="8"
+                                     TextChanged="AdditionalInformationText_TextChanged"
+                                     ToolTip="This information is used as context when generating metadata. It does not replace the image analysis."/>
+                        </StackPanel>
                     </GroupBox>
 
-                    <!-- Metadata title -->
-                    <GroupBox Header="Title"
-                              Margin="0,10,0,0">
-                        <TextBox x:Name="TitleText"
-                                 TextWrapping="Wrap"
-                                 TextChanged="TitleText_TextChanged"
-                                 MinHeight="45"
-                                 Padding="8"/>
-                    </GroupBox>
+                    <TextBlock Text="EDIT METADATA"
+                               FontWeight="Bold"
+                               FontSize="11"
+                               Foreground="#526579"
+                               Margin="0,14,0,4"/>
 
-                    <!-- Metadata keywords -->
-                    <GroupBox Header="Keywords"
-                              Margin="0,10,0,0">
-                        <TextBox x:Name="KeywordsText"
-                                 TextWrapping="Wrap"
-                                 TextChanged="KeywordsText_TextChanged"
-                                 AcceptsReturn="True"
-                                 VerticalScrollBarVisibility="Auto"
-                                 MinHeight="80"
-                                 MaxHeight="150"
-                                 Padding="8"/>
-                    </GroupBox>
+                    <TextBlock Text="Review and edit the generated fields before exporting."
+                               FontSize="12"
+                               Foreground="Gray"
+                               Margin="0,0,0,8"/>
 
-                    <!-- Primary category -->
-                    <GroupBox Header="Primary Category"
-                              Margin="0,10,0,0">
-                        <ComboBox x:Name="PrimaryCategoryComboBox"
-                                  MinHeight="35"
-                                  SelectionChanged="PrimaryCategoryComboBox_SelectionChanged"/>
-                    </GroupBox>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
 
-                    <!-- Secondary category -->
-                    <GroupBox Header="Secondary Category"
-                              Margin="0,10,0,10">
-                        <ComboBox x:Name="SecondaryCategoryComboBox"
-                                  MinHeight="35"
-                                  SelectionChanged="SecondaryCategoryComboBox_SelectionChanged"/>
-                    </GroupBox>
+                        <GroupBox Grid.Column="0"
+                                  Header="Shutterstock"
+                                  Margin="0,0,6,0">
+                            <StackPanel Margin="8">
+                                <TextBlock Text="Title"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,4"/>
+
+                                <TextBlock Text="A concise, accurate description of the image."
+                                           FontSize="11"
+                                           Foreground="Gray"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,5"/>
+
+                                <TextBox x:Name="ShutterstockTitleText"
+                                         TextWrapping="Wrap"
+                                         MinHeight="55"
+                                         Padding="6"
+                                         TextChanged="ShutterstockTitleText_TextChanged"
+                                         ToolTip="Describe the main subject and relevant context clearly and accurately."/>
+
+                                <TextBlock Text="Keywords"
+                                           FontWeight="SemiBold"
+                                           Margin="0,10,0,4"/>
+
+                                <TextBlock Text="Relevant search terms, separated by commas."
+                                           FontSize="11"
+                                           Foreground="Gray"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,5"/>
+
+                                <TextBox x:Name="ShutterstockKeywordsText"
+                                         TextWrapping="Wrap"
+                                         AcceptsReturn="True"
+                                         VerticalScrollBarVisibility="Auto"
+                                         MinHeight="100"
+                                         Padding="6"
+                                         TextChanged="ShutterstockKeywordsText_TextChanged"
+                                         ToolTip="Use accurate, relevant keywords. Check spelling and remove duplicates or unrelated terms."/>
+
+                                <TextBlock Text="Primary Category"
+                                           FontWeight="SemiBold"
+                                           Margin="0,10,0,4"/>
+
+                                <TextBlock Text="Choose the category that best describes the image."
+                                           FontSize="11"
+                                           Foreground="Gray"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,5"/>
+
+                                <ComboBox x:Name="ShutterstockPrimaryCategoryComboBox"
+                                          MinHeight="32"
+                                          SelectionChanged="ShutterstockPrimaryCategoryComboBox_SelectionChanged"/>
+
+                                <TextBlock Text="Secondary Category"
+                                           FontWeight="SemiBold"
+                                           Margin="0,10,0,4"/>
+
+                                <TextBlock Text="Select another relevant category if appropriate."
+                                           FontSize="11"
+                                           Foreground="Gray"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,5"/>
+
+                                <ComboBox x:Name="ShutterstockSecondaryCategoryComboBox"
+                                          MinHeight="32"
+                                          SelectionChanged="ShutterstockSecondaryCategoryComboBox_SelectionChanged"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Grid.Column="1"
+                                  Header="Adobe Stock"
+                                  Margin="6,0,0,0">
+                            <StackPanel Margin="8">
+                                <TextBlock Text="Title"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,4"/>
+
+                                <TextBlock Text="A clear and accurate description of the image."
+                                           FontSize="11"
+                                           Foreground="Gray"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,5"/>
+
+                                <TextBox x:Name="AdobeStockTitleText"
+                                         TextWrapping="Wrap"
+                                         MinHeight="55"
+                                         Padding="6"
+                                         TextChanged="AdobeStockTitleText_TextChanged"
+                                         ToolTip="Describe the main subject without adding details that are not visible or provided."/>
+
+                                <TextBlock Text="Keywords"
+                                           FontWeight="SemiBold"
+                                           Margin="0,10,0,4"/>
+
+                                <TextBlock Text="Relevant search terms, separated by commas."
+                                           FontSize="11"
+                                           Foreground="Gray"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,5"/>
+
+                                <TextBox x:Name="AdobeStockKeywordsText"
+                                         TextWrapping="Wrap"
+                                         AcceptsReturn="True"
+                                         VerticalScrollBarVisibility="Auto"
+                                         MinHeight="100"
+                                         Padding="6"
+                                         TextChanged="AdobeStockKeywordsText_TextChanged"
+                                         ToolTip="Review keyword relevance and ordering before submitting to Adobe Stock."/>
+
+                                <TextBlock Text="Category"
+                                           FontWeight="SemiBold"
+                                           Margin="0,10,0,4"/>
+
+                                <TextBlock Text="Choose the most suitable category for the image."
+                                           FontSize="11"
+                                           Foreground="Gray"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,5"/>
+
+                                <ComboBox x:Name="AdobeStockCategoryComboBox"
+                                          MinHeight="32"
+                                          SelectionChanged="AdobeStockCategoryComboBox_SelectionChanged"/>
+                            </StackPanel>
+                        </GroupBox>
+                    </Grid>
                 </StackPanel>
             </ScrollViewer>
         </Grid>

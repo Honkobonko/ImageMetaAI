@@ -17,7 +17,8 @@ public interface IOllamaClient
     CancellationToken cancellationToken = default);
 
     Task<ImageMetadata> GenerateMetadataAsync(
-        string model,
-        string prompt,
-        CancellationToken cancellationToken = default);
+    string model,
+    string prompt,
+    MetadataPlatform platform,
+    CancellationToken cancellationToken = default);
 }

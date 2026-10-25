@@ -8,5 +8,6 @@ public interface IImageProcessingService
         ImageFile imageFile,
         Action<ImageFile>? progressCallback = null,
         CancellationToken cancellationToken = default,
-        bool recognizeLocations = false);
+        bool recognizeLocations = false,
+        IReadOnlyCollection<MetadataPlatform>? platforms = null);
 }

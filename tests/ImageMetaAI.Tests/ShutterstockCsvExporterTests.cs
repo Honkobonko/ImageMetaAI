@@ -213,7 +213,7 @@ public class ShutterstockCsvExporterTests : IDisposable
             Path.GetTempPath(),
             fileName))
         {
-            Metadata = new ImageMetadata
+            ShutterstockMetadata = new ImageMetadata
             {
                 Title = title,
                 Keywords = keywords,

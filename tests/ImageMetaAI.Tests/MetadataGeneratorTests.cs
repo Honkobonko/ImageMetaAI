@@ -15,7 +15,9 @@ public class MetadataGeneratorTests
             CreateModelSettings());
 
         await Assert.ThrowsAsync<ArgumentException>(
-            () => generator.GenerateAsync(string.Empty));
+            () => generator.GenerateAsync(
+                string.Empty,
+                MetadataPlatform.Shutterstock));
     }
 
     [Fact]
@@ -28,7 +30,9 @@ public class MetadataGeneratorTests
             CreateModelSettings());
 
         await Assert.ThrowsAsync<ArgumentException>(
-            () => generator.GenerateAsync("   "));
+            () => generator.GenerateAsync(
+                "   ",
+                MetadataPlatform.Shutterstock));
     }
 
     [Fact]
@@ -41,7 +45,8 @@ public class MetadataGeneratorTests
             CreateModelSettings());
 
         await generator.GenerateAsync(
-            "A mountain landscape.");
+            "A mountain landscape.",
+            MetadataPlatform.Shutterstock);
 
         Assert.Equal(
             "test-metadata-model",
@@ -61,7 +66,8 @@ public class MetadataGeneratorTests
             "A mountain landscape with a lake.";
 
         await generator.GenerateAsync(
-            visionDescription);
+            visionDescription,
+            MetadataPlatform.Shutterstock);
 
         Assert.NotNull(client.LastPrompt);
         Assert.Contains(
@@ -94,7 +100,8 @@ public class MetadataGeneratorTests
             CreateModelSettings());
 
         var result = await generator.GenerateAsync(
-            "A mountain landscape with a lake.");
+            "A mountain landscape with a lake.",
+            MetadataPlatform.Shutterstock);
 
         Assert.Same(
             expectedMetadata,
@@ -110,9 +117,12 @@ public class MetadataGeneratorTests
             client,
             CreateModelSettings());
 
-        const string description = "A mountain landscape with a lake.";
+        const string description =
+            "A mountain landscape with a lake.";
 
-        await generator.GenerateAsync(description);
+        await generator.GenerateAsync(
+            description,
+            MetadataPlatform.Shutterstock);
 
         Assert.Contains(description, client.LastPrompt);
         Assert.DoesNotContain(
@@ -129,13 +139,18 @@ public class MetadataGeneratorTests
             client,
             CreateModelSettings());
 
-        const string additionalInformation = "Location: Bavaria, Germany";
+        const string additionalInformation =
+            "Location: Bavaria, Germany";
 
         await generator.GenerateAsync(
             "A mountain landscape.",
+            MetadataPlatform.Shutterstock,
             additionalInformation: additionalInformation);
 
-        Assert.Contains(additionalInformation, client.LastPrompt);
+        Assert.Contains(
+            additionalInformation,
+            client.LastPrompt);
+
         Assert.DoesNotContain(
             "{{ADDITIONAL_INFORMATION}}",
             client.LastPrompt);
@@ -151,13 +166,91 @@ public class MetadataGeneratorTests
             CreateModelSettings());
 
         await generator.GenerateAsync(
-            "A mountain landscape.");
+            "A mountain landscape.",
+            MetadataPlatform.Shutterstock);
 
-        Assert.Contains("None provided.", client.LastPrompt);
+        Assert.Contains(
+            "None provided.",
+            client.LastPrompt);
+
         Assert.DoesNotContain(
             "{{ADDITIONAL_INFORMATION}}",
             client.LastPrompt);
     }
+
+    [Fact]
+    public async Task GenerateAsync_UsesAdobeStockPrompt_WhenAdobeStockIsSelected()
+    {
+        var client = new FakeOllamaClient();
+
+        var generator = new MetadataGenerator(
+            client,
+            CreateModelSettings());
+
+        await generator.GenerateAsync(
+            "A mountain landscape.",
+            MetadataPlatform.AdobeStock);
+
+        Assert.NotNull(client.LastPrompt);
+
+        // The Adobe prompt should not be the Shutterstock prompt.
+        Assert.DoesNotContain(
+            "Shutterstock",
+            client.LastPrompt,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    
+    [Fact]
+    public async Task GenerateAsync_PassesShutterstockPlatformToClient()
+    {
+        var client = new FakeOllamaClient();
+        var generator = new MetadataGenerator(
+            client,
+            CreateModelSettings());
+
+        await generator.GenerateAsync(
+            "A mountain landscape",
+            MetadataPlatform.Shutterstock);
+
+        Assert.Equal(
+            MetadataPlatform.Shutterstock,
+            client.LastPlatform);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_PassesAdobeStockPlatformToClient()
+    {
+        var client = new FakeOllamaClient();
+        var generator = new MetadataGenerator(
+            client,
+            CreateModelSettings());
+
+        await generator.GenerateAsync(
+            "A mountain landscape",
+            MetadataPlatform.AdobeStock);
+
+        Assert.Equal(
+            MetadataPlatform.AdobeStock,
+            client.LastPlatform);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ThrowsForUnsupportedPlatform()
+    {
+        var client = new FakeOllamaClient();
+        var generator = new MetadataGenerator(
+            client,
+            CreateModelSettings());
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => generator.GenerateAsync(
+                "A mountain landscape",
+                (MetadataPlatform)999));
+
+        Assert.Null(client.LastPlatform);
+    }
+
 
     private static OllamaModelSettings CreateModelSettings()
     {
@@ -175,6 +268,8 @@ public class MetadataGeneratorTests
         public string? LastPrompt { get; private set; }
 
         public ImageMetadata Metadata { get; init; } = new();
+
+        public MetadataPlatform? LastPlatform { get; private set; }
 
         public Task<bool> IsAvailableAsync(
             CancellationToken cancellationToken = default)
@@ -200,10 +295,12 @@ public class MetadataGeneratorTests
         public Task<ImageMetadata> GenerateMetadataAsync(
             string model,
             string prompt,
+            MetadataPlatform platform,
             CancellationToken cancellationToken = default)
         {
             LastModel = model;
             LastPrompt = prompt;
+            LastPlatform = platform;
 
             return Task.FromResult(Metadata);
         }

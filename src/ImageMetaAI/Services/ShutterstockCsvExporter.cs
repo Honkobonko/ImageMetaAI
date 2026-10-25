@@ -18,13 +18,13 @@ public class ShutterstockCsvExporter
                 $"Export folder does not exist: {folderPath}");
         }
 
-        var exportImages = images
-            .Where(image =>
-                image.Metadata is not null &&
-                !string.IsNullOrWhiteSpace(image.Metadata.Title) &&
-                image.Metadata.Keywords.Count > 0 &&
-                !string.IsNullOrWhiteSpace(image.Metadata.Category))
-            .ToList();
+       var exportImages = images
+        .Where(image =>
+            image.ShutterstockMetadata is not null &&
+            !string.IsNullOrWhiteSpace(image.ShutterstockMetadata.Title) &&
+            image.ShutterstockMetadata.Keywords.Count > 0 &&
+            !string.IsNullOrWhiteSpace(image.ShutterstockMetadata.Category))
+        .ToList();
 
         if (exportImages.Count == 0)
         {
@@ -50,7 +50,7 @@ public class ShutterstockCsvExporter
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var metadata = image.Metadata!;
+            var metadata = image.ShutterstockMetadata!;
 
             var categories = new List<string>
             {

@@ -1,5 +1,53 @@
-Create accurate, searchable stock photography metadata
-for Adobe Stock in English.
+Create accurate, searchable stock photography metadata for Adobe Stock in English.
+
+TITLE
+- Write a clear, specific, natural stock photography title in English.
+- Describe the main subject and relevant context.
+- Avoid keyword lists, repetition, and unnecessary filler.
+
+KEYWORDS
+- Generate 20 to 30 distinct, relevant keywords in English.
+- Put the most important and specific keywords first.
+- Prioritize the main subject, actions, setting, visual characteristics, and relevant concepts.
+- Avoid duplicates, irrelevant terms, and unsupported assumptions.
+
+ADOBE STOCK CATEGORY
+Choose exactly one primary category that best represents the image.
+
+Select the category from this exact list:
+- Animals
+- Buildings and Architecture
+- Business
+- Drinks
+- The Environment
+- States of Mind
+- Food
+- Graphic Resources
+- Hobbies and Leisure
+- Industry
+- Landscapes
+- Lifestyle
+- People
+- Plants and Flowers
+- Culture and Religion
+- Science
+- Social Issues
+- Sports
+- Technology
+- Transport
+- Travel
+
+CATEGORY RULES
+- The primary category is required.
+- Choose the category that best represents the main subject.
+- Select only categories from the supplied list.
+
+ACCURACY
+- Use only information supported by the image description or reliable user-provided additional information.
+- Additional information may clarify context but must not override clearly visible evidence.
+- Do not invent names, locations, brands, professions, events, or other details.
+
+Return only the metadata matching the required JSON schema.
 
 Image description:
 {{IMAGE_DESCRIPTION}}

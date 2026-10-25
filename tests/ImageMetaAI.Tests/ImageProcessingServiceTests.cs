@@ -81,7 +81,7 @@ public class ImageProcessingServiceTests
 
         Assert.Same(
             expectedMetadata,
-            imageFile.Metadata);
+            imageFile.ShutterstockMetadata);
     }
 
     [Fact]
@@ -111,6 +111,7 @@ public class ImageProcessingServiceTests
 
         Assert.Equal(
             [
+                ImageStatus.Processing,
                 ImageStatus.Processing,
                 ImageStatus.Processing,
                 ImageStatus.Review
@@ -289,6 +290,7 @@ public class ImageProcessingServiceTests
 
         public Task<ImageMetadata> GenerateAsync(
             string visionDescription,
+            MetadataPlatform platform,
             CancellationToken cancellationToken = default,
             string? additionalInformation = null)
         {

@@ -13,22 +13,29 @@ public partial class MainWindow : Window
     private readonly ImageScanner _imageScanner = new();
     private readonly IOllamaService _ollamaService;
     private readonly IImageProcessingService _imageProcessingService;
-
     private readonly GpsMetadataReader _gpsMetadataReader = new();
+    private readonly ShutterstockCsvExporter _shutterstockCsvExporter = new();
+    private readonly AdobeStockCsvExporter _adobeStockCsvExporter = new();
 
     private bool _isUpdatingFields;
     private bool _isProcessing;
+    private CancellationTokenSource? _processingCancellationTokenSource;
 
     public MainWindow()
     {
         InitializeComponent();
 
-        PrimaryCategoryComboBox.ItemsSource =
+        ShutterstockPrimaryCategoryComboBox.ItemsSource =
             ShutterstockCategories.All;
 
-        SecondaryCategoryComboBox.ItemsSource =
+        ShutterstockSecondaryCategoryComboBox.ItemsSource =
             new[] { string.Empty }
                 .Concat(ShutterstockCategories.All)
+                .ToList();
+
+        AdobeStockCategoryComboBox.ItemsSource =
+            AdobeStockCategories.All
+                .Select(category => category.Name)
                 .ToList();
 
         var httpClient = new HttpClient
@@ -81,7 +88,9 @@ public partial class MainWindow : Window
         }
     }
 
-    private void SelectFolder_Click(object sender, RoutedEventArgs e)
+    private void SelectFolder_Click(
+        object sender,
+        RoutedEventArgs e)
     {
         if (_isProcessing)
         {
@@ -114,7 +123,6 @@ public partial class MainWindow : Window
             }
             catch (Exception ex)
             {
-                // GPS metadata is optional. Keep the image available.
                 System.Diagnostics.Debug.WriteLine(
                     $"Could not read GPS data from {image.FileName}: {ex.Message}");
             }
@@ -180,37 +188,159 @@ public partial class MainWindow : Window
             AdditionalInformationText.Text;
     }
 
-    private void PrimaryCategoryComboBox_SelectionChanged(
+    private void LocationText_TextChanged(
+    object sender,
+    TextChangedEventArgs e)
+    {
+        if (_isUpdatingFields ||
+            ImageList.SelectedItem is not ImageFile imageFile)
+        {
+            return;
+        }
+
+        imageFile.ResolvedLocation = LocationText.Text;
+
+        imageFile.IsLocationManuallyEdited =
+            !string.IsNullOrWhiteSpace(LocationText.Text);
+
+        UpdateLocationStatus(imageFile);
+    }
+
+    private void ShutterstockTitleText_TextChanged(
+        object sender,
+        TextChangedEventArgs e)
+    {
+        if (_isUpdatingFields ||
+            ImageList.SelectedItem is not ImageFile imageFile ||
+            imageFile.ShutterstockMetadata is not { } metadata)
+        {
+            return;
+        }
+
+        metadata.Title = ShutterstockTitleText.Text;
+    }
+
+    private void ShutterstockKeywordsText_TextChanged(
+        object sender,
+        TextChangedEventArgs e)
+    {
+        if (_isUpdatingFields ||
+            ImageList.SelectedItem is not ImageFile imageFile ||
+            imageFile.ShutterstockMetadata is not { } metadata)
+        {
+            return;
+        }
+
+        metadata.Keywords = ShutterstockKeywordsText.Text
+            .Split(
+                ',',
+                StringSplitOptions.RemoveEmptyEntries |
+                StringSplitOptions.TrimEntries);
+    }
+
+    private void AdobeStockTitleText_TextChanged(
+        object sender,
+        TextChangedEventArgs e)
+    {
+        if (_isUpdatingFields ||
+            ImageList.SelectedItem is not ImageFile imageFile ||
+            imageFile.AdobeStockMetadata is not { } metadata)
+        {
+            return;
+        }
+
+        metadata.Title = AdobeStockTitleText.Text;
+    }
+
+    private void AdobeStockKeywordsText_TextChanged(
+        object sender,
+        TextChangedEventArgs e)
+    {
+        if (_isUpdatingFields ||
+            ImageList.SelectedItem is not ImageFile imageFile ||
+            imageFile.AdobeStockMetadata is not { } metadata)
+        {
+            return;
+        }
+
+        metadata.Keywords = AdobeStockKeywordsText.Text
+            .Split(
+                ',',
+                StringSplitOptions.RemoveEmptyEntries |
+                StringSplitOptions.TrimEntries);
+    }
+
+    private void ShutterstockPrimaryCategoryComboBox_SelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
     {
         if (_isUpdatingFields ||
             ImageList.SelectedItem is not ImageFile imageFile ||
-            imageFile.Metadata is null ||
-            PrimaryCategoryComboBox.SelectedItem is not string category)
+            ShutterstockPrimaryCategoryComboBox.SelectedItem is not string category ||
+            imageFile.ShutterstockMetadata is not { } metadata)
         {
             return;
         }
 
-        imageFile.Metadata.Category = category;
+        metadata.Category = category;
     }
 
-    private void SecondaryCategoryComboBox_SelectionChanged(
+    private void ShutterstockSecondaryCategoryComboBox_SelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
     {
         if (_isUpdatingFields ||
             ImageList.SelectedItem is not ImageFile imageFile ||
-            imageFile.Metadata is null)
+            imageFile.ShutterstockMetadata is not { } metadata)
         {
             return;
         }
 
-        imageFile.Metadata.SecondaryCategory =
-            SecondaryCategoryComboBox.SelectedItem as string;
+        metadata.SecondaryCategory =
+            ShutterstockSecondaryCategoryComboBox.SelectedItem as string;
     }
 
-    private async void AnalyzeAllNew_Click(
+    private void AdobeStockCategoryComboBox_SelectionChanged(
+    object sender,
+    SelectionChangedEventArgs e)
+    {
+        if (_isUpdatingFields ||
+            ImageList.SelectedItem is not ImageFile imageFile ||
+            AdobeStockCategoryComboBox.SelectedItem is not string categoryName ||
+            imageFile.AdobeStockMetadata is not { } metadata)
+        {
+            return;
+        }
+
+        metadata.Category = categoryName;
+    }
+    
+    private void UpdateLocationStatus(ImageFile imageFile)
+    {
+        if (imageFile.IsLocationManuallyEdited &&
+            !string.IsNullOrWhiteSpace(imageFile.ResolvedLocation))
+        {
+            LocationStatusText.Text =
+                "Manually edited. Clear the field to allow automatic GPS lookup during analysis.";
+        }
+        else if (!string.IsNullOrWhiteSpace(imageFile.ResolvedLocation))
+        {
+            LocationStatusText.Text =
+                "Location detected or provided. You can edit it at any time.";
+        }
+        else if (imageFile.GpsCoordinates is null)
+        {
+            LocationStatusText.Text =
+                "No location set. No GPS coordinates are available for automatic lookup.";
+        }
+        else
+        {
+            LocationStatusText.Text =
+                "No location set. GPS lookup can fill this field during analysis if enabled.";
+        }
+    }
+
+    private async void AnalyzeAll_Click(
         object sender,
         RoutedEventArgs e)
     {
@@ -221,14 +351,11 @@ public partial class MainWindow : Window
 
         var images = ImageList.Items
             .Cast<ImageFile>()
-            .Where(image =>
-                image.Status == ImageStatus.Open ||
-                image.Status == ImageStatus.Error)
             .ToList();
 
         await ProcessImagesAsync(
             images,
-            "No new images to analyze.");
+            "No images loaded.");
     }
 
     private async void AnalyzeSelected_Click(
@@ -259,10 +386,32 @@ public partial class MainWindow : Window
             return;
         }
 
+        var selectedPlatforms = new List<MetadataPlatform>();
+
+        if (ShutterstockMetadataCheckBox.IsChecked == true)
+        {
+            selectedPlatforms.Add(MetadataPlatform.Shutterstock);
+        }
+
+        if (AdobeStockMetadataCheckBox.IsChecked == true)
+        {
+            selectedPlatforms.Add(MetadataPlatform.AdobeStock);
+        }
+
+        if (selectedPlatforms.Count == 0)
+        {
+            OllamaStatusText.Text =
+                "Please select at least one metadata platform.";
+            return;
+        }
+
         _isProcessing = true;
+        _processingCancellationTokenSource = new CancellationTokenSource();
+        SetProcessingControlsEnabled(false);
 
         var succeeded = 0;
         var failed = 0;
+        var cancelled = false;
 
         ProcessingProgressBar.Minimum = 0;
         ProcessingProgressBar.Maximum = images.Count;
@@ -270,61 +419,125 @@ public partial class MainWindow : Window
 
         try
         {
-            for (var index = 0; index < images.Count; index++)
+            foreach (var imageFile in images)
             {
-                var imageFile = images[index];
+                if (_processingCancellationTokenSource.Token.IsCancellationRequested)
+                {
+                    cancelled = true;
+                    break;
+                }
 
                 OllamaStatusText.Text =
-                    $"Processing {index + 1} of {images.Count}: " +
+                    $"Processing {succeeded + failed + 1} of {images.Count}: " +
                     imageFile.FileName;
-
-                ProcessingProgressText.Text =
-                    $"{index + 1} / {images.Count}";
 
                 try
                 {
                     await _imageProcessingService.ProcessAsync(
-                    imageFile,
-                    updatedImage =>
-                    {
-                        if (ReferenceEquals(
-                            ImageList.SelectedItem,
-                            updatedImage))
+                        imageFile,
+                        updatedImage =>
                         {
-                            UpdateMetadataFields(updatedImage);
-                        }
+                            if (ReferenceEquals(
+                                ImageList.SelectedItem,
+                                updatedImage))
+                            {
+                                UpdateMetadataFields(updatedImage);
+                            }
 
-                        ImageList.Items.Refresh();
-                    },
-                    recognizeLocations:
-                        RecognizeLocationsCheckBox.IsChecked == true);
+                            ImageList.Items.Refresh();
+                        },
+                        cancellationToken: _processingCancellationTokenSource.Token,
+                        recognizeLocations:
+                            RecognizeLocationsCheckBox.IsChecked == true,
+                        platforms: selectedPlatforms);
 
                     succeeded++;
+                }
+                catch (OperationCanceledException)
+                {
+                    cancelled = true;
+                    break;
                 }
                 catch (Exception ex)
                 {
                     failed++;
 
-                    // Keep processing the remaining images.
                     System.Diagnostics.Debug.WriteLine(
-                        $"Failed to process {imageFile.FileName}: {ex.Message}");
+                        $"Failed to process {imageFile.FileName}: {ex}");
                 }
 
-                ProcessingProgressBar.Value = index + 1;
+                ProcessingProgressBar.Value = succeeded + failed;
+                ProcessingProgressText.Text =
+                    $"{succeeded + failed} / {images.Count}";
+
                 ImageList.Items.Refresh();
                 UpdateImageCount();
             }
         }
         finally
         {
+            _processingCancellationTokenSource.Dispose();
+            _processingCancellationTokenSource = null;
+
             _isProcessing = false;
+            SetProcessingControlsEnabled(true);
         }
 
-        OllamaStatusText.Text =
-            $"Processing finished. Successful: {succeeded}, Failed: {failed}.";
+        if (cancelled)
+        {
+            OllamaStatusText.Text =
+                $"Processing cancelled. Successful: {succeeded}, Failed: {failed}.";
 
-        ProcessingProgressText.Text =
-            $"Completed {images.Count} images.";
+            ProcessingProgressText.Text =
+                $"Stopped after {succeeded + failed} of {images.Count} images.";
+        }
+        else
+        {
+            OllamaStatusText.Text =
+                $"Processing finished. Successful: {succeeded}, Failed: {failed}.";
+
+            ProcessingProgressText.Text =
+                $"Completed {images.Count} images.";
+        }
+    }
+
+    private void SetProcessingControlsEnabled(bool enabled)
+    {
+        SelectFolderButton.IsEnabled = enabled;
+        AnalyzeAllButton.IsEnabled = enabled;
+        AnalyzeSelectedButton.IsEnabled = enabled;
+        CancelProcessingButton.IsEnabled = !enabled;
+
+        ShutterstockMetadataCheckBox.IsEnabled = enabled;
+        AdobeStockMetadataCheckBox.IsEnabled = enabled;
+        RecognizeLocationsCheckBox.IsEnabled = enabled;
+
+        ImageList.IsEnabled = true;
+
+        LocationText.IsEnabled = enabled;
+        AdditionalInformationText.IsEnabled = enabled;
+
+        ShutterstockTitleText.IsEnabled = enabled;
+        ShutterstockKeywordsText.IsEnabled = enabled;
+        ShutterstockPrimaryCategoryComboBox.IsEnabled = enabled;
+        ShutterstockSecondaryCategoryComboBox.IsEnabled = enabled;
+
+        AdobeStockTitleText.IsEnabled = enabled;
+        AdobeStockKeywordsText.IsEnabled = enabled;
+        AdobeStockCategoryComboBox.IsEnabled = enabled;
+
+        ExportCsvButton.IsEnabled =
+            enabled && ImageList.Items.Count > 0;
+    }
+
+    private void CancelProcessing_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _processingCancellationTokenSource?.Cancel();
+
+        CancelProcessingButton.IsEnabled = false;
+        OllamaStatusText.Text = "Cancellation requested...";
     }
 
     private void UpdateMetadataFields(ImageFile imageFile)
@@ -337,27 +550,51 @@ public partial class MainWindow : Window
                 imageFile.VisionDescription
                 ?? "No vision description available.";
 
+            LocationText.Text =
+                imageFile.ResolvedLocation ?? string.Empty;
+
+            UpdateLocationStatus(imageFile);
+
             AdditionalInformationText.Text =
                 imageFile.AdditionalInformation;
 
-            TitleText.Text =
-                imageFile.Metadata?.Title
-                ?? string.Empty;
+            var shutterstock = imageFile.ShutterstockMetadata;
 
-            KeywordsText.Text =
-                imageFile.Metadata is null
-                    ? string.Empty
-                    : string.Join(
-                        ", ",
-                        imageFile.Metadata.Keywords);
+            ShutterstockTitleText.Text =
+                shutterstock?.Title ?? string.Empty;
 
-            PrimaryCategoryComboBox.SelectedItem =
-                imageFile.Metadata?.Category;
+            ShutterstockKeywordsText.Text = shutterstock is null
+                ? string.Empty
+                : string.Join(", ", shutterstock.Keywords);
 
-            SecondaryCategoryComboBox.SelectedItem =
-                imageFile.Metadata?.SecondaryCategory
-                ?? string.Empty;
-        }
+            ShutterstockPrimaryCategoryComboBox.SelectedItem =
+                shutterstock?.Category;
+
+            ShutterstockSecondaryCategoryComboBox.SelectedItem =
+                shutterstock?.SecondaryCategory ?? string.Empty;
+
+            var adobeStock = imageFile.AdobeStockMetadata;
+
+            AdobeStockTitleText.Text =
+                adobeStock?.Title ?? string.Empty;
+
+            AdobeStockKeywordsText.Text = adobeStock is null
+                ? string.Empty
+                : string.Join(", ", adobeStock.Keywords);
+
+            var adobeCategory = AdobeStockCategories.All
+                .Where(category =>
+                    category.Id.ToString() == adobeStock?.Category)
+                .Select(category => category.Name)
+                .FirstOrDefault();
+
+            var categoryName = imageFile.AdobeStockMetadata?.Category;
+
+            AdobeStockCategoryComboBox.SelectedItem =
+                AdobeStockCategories.All.Any(item => item.Name == categoryName)
+                    ? categoryName
+                    : null;
+                    }
         finally
         {
             _isUpdatingFields = false;
@@ -372,11 +609,19 @@ public partial class MainWindow : Window
         {
             ImagePreview.Source = null;
             VisionDescriptionText.Clear();
+            LocationText.Clear();
+            LocationStatusText.Text =
+                "Select an image to see its location status.";
             AdditionalInformationText.Clear();
-            TitleText.Clear();
-            KeywordsText.Clear();
-            PrimaryCategoryComboBox.SelectedItem = null;
-            SecondaryCategoryComboBox.SelectedItem = string.Empty;
+
+            ShutterstockTitleText.Clear();
+            ShutterstockKeywordsText.Clear();
+            ShutterstockPrimaryCategoryComboBox.SelectedItem = null;
+            ShutterstockSecondaryCategoryComboBox.SelectedItem = string.Empty;
+
+            AdobeStockTitleText.Clear();
+            AdobeStockKeywordsText.Clear();
+            AdobeStockCategoryComboBox.SelectedItem = null;         
         }
         finally
         {
@@ -387,9 +632,11 @@ public partial class MainWindow : Window
     private void UpdateImageCount()
     {
         var total = ImageList.Items.Count;
+
         var completed = ImageList.Items
             .Cast<ImageFile>()
             .Count(image => image.Status == ImageStatus.Review);
+
         var failed = ImageList.Items
             .Cast<ImageFile>()
             .Count(image => image.Status == ImageStatus.Error);
@@ -397,40 +644,10 @@ public partial class MainWindow : Window
         ImageCountText.Text =
             $"{total} images | {completed} reviewed | {failed} failed";
     }
-
-    private readonly ShutterstockCsvExporter _csvExporter = new();
-
-    private void TitleText_TextChanged(object sender, TextChangedEventArgs e)
-    {
-        if (_isUpdatingFields ||
-            ImageList.SelectedItem is not ImageFile imageFile ||
-            imageFile.Metadata is null)
-        {
-            return;
-        }
-
-        imageFile.Metadata.Title = TitleText.Text;
-    }
-
-    private void KeywordsText_TextChanged(
+    
+    private async void ExportCsv_Click(
         object sender,
-        TextChangedEventArgs e)
-    {
-        if (_isUpdatingFields ||
-            ImageList.SelectedItem is not ImageFile imageFile ||
-            imageFile.Metadata is null)
-        {
-            return;
-        }
-
-        imageFile.Metadata.Keywords = KeywordsText.Text
-            .Split(
-                ',',
-                StringSplitOptions.RemoveEmptyEntries |
-                StringSplitOptions.TrimEntries);
-    }
-
-    private async void ExportCsv_Click(object sender, RoutedEventArgs e)
+        RoutedEventArgs e)
     {
         if (_isProcessing)
         {
@@ -447,52 +664,131 @@ public partial class MainWindow : Window
                 "ImageMetaAI",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
-
             return;
         }
 
-        ExportCsvButton.IsEnabled = false;
-        ExportCsvButton.Content = "Exporting...";
-        OllamaStatusText.Text = "Exporting Shutterstock CSV...";
+        var exportShutterstock =
+            ShutterstockMetadataCheckBox.IsChecked == true;
 
-        try
+        var exportAdobeStock =
+            AdobeStockMetadataCheckBox.IsChecked == true;
+
+        if (!exportShutterstock && !exportAdobeStock)
         {
-            var images = ImageList.Items
-                .Cast<ImageFile>()
-                .ToList();
-
-            var filePath = await _csvExporter.ExportAsync(
-                folderPath,
-                images);
-
-            OllamaStatusText.Text = "CSV export completed.";
-
             System.Windows.MessageBox.Show(
-                $"CSV export completed successfully:\n\n{filePath}",
+                "Please select at least one metadata platform to export.",
                 "ImageMetaAI",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
+            return;
         }
-        catch (Exception ex)
-        {
-            OllamaStatusText.Text = "CSV export failed.";
 
-            System.Windows.MessageBox.Show(
-                ex.Message,
-                "CSV Export Error",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+        var images = ImageList.Items
+            .Cast<ImageFile>()
+            .ToList();
+
+        ExportCsvButton.IsEnabled = false;
+        ExportCsvButton.Content = "Exporting...";
+
+        var exportedFiles = new List<string>();
+        var errors = new List<string>();
+
+        try
+        {
+            if (exportShutterstock)
+            {
+                OllamaStatusText.Text =
+                    "Exporting Shutterstock CSV...";
+
+                try
+                {
+                    var filePath =
+                        await _shutterstockCsvExporter.ExportAsync(
+                            folderPath,
+                            images);
+
+                    exportedFiles.Add(filePath);
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"Shutterstock: {ex.Message}");
+                }
+            }
+
+            if (exportAdobeStock)
+            {
+                OllamaStatusText.Text =
+                    "Exporting Adobe Stock CSV...";
+
+                try
+                {
+                    var filePath =
+                        await _adobeStockCsvExporter.ExportAsync(
+                            folderPath,
+                            images);
+
+                    exportedFiles.Add(filePath);
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"Adobe Stock: {ex.Message}");
+                }
+            }
+
+            if (errors.Count == 0)
+            {
+                OllamaStatusText.Text = "CSV export completed.";
+
+                System.Windows.MessageBox.Show(
+                    "CSV export completed successfully:\n\n" +
+                    string.Join("\n", exportedFiles),
+                    "ImageMetaAI",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            else
+            {
+                OllamaStatusText.Text =
+                    exportedFiles.Count > 0
+                        ? "CSV export completed with errors."
+                        : "CSV export failed.";
+
+                var message = string.Empty;
+
+                if (exportedFiles.Count > 0)
+                {
+                    message +=
+                        "Successfully exported:\n" +
+                        string.Join("\n", exportedFiles) +
+                        "\n\n";
+                }
+
+                message +=
+                    "Export errors:\n" +
+                    string.Join("\n", errors);
+
+                System.Windows.MessageBox.Show(
+                    message,
+                    "CSV Export Results",
+                    MessageBoxButton.OK,
+                    errors.Count == exportedFiles.Count
+                        ? MessageBoxImage.Error
+                        : MessageBoxImage.Warning);
+            }
         }
         finally
         {
-            ExportCsvButton.Content = "Export Shutterstock CSV";
+            ExportCsvButton.Content = "Export";
             ExportCsvButton.IsEnabled =
                 Directory.Exists(FolderPathText.Text) &&
                 !_isProcessing;
         }
     }
 
-    private void OpenFolder_Click(object sender, RoutedEventArgs e)
+
+    private void OpenFolder_Click(
+        object sender,
+        RoutedEventArgs e)
     {
         var folderPath = FolderPathText.Text;
 
@@ -504,7 +800,6 @@ public partial class MainWindow : Window
                 "ImageMetaAI",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
-
             return;
         }
 

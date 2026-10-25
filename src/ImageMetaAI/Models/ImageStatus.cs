@@ -7,5 +7,6 @@ public enum ImageStatus
     Review,
     Completed,
     Skipped,
-    Error
+    Error,
+    Cancelled
 }

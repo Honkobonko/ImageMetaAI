@@ -17,6 +17,7 @@ public class MetadataGenerator : IMetadataGenerator
 
     public async Task<ImageMetadata> GenerateAsync(
         string visionDescription,
+        MetadataPlatform platform,
         CancellationToken cancellationToken = default,
         string? additionalInformation = null)
     {
@@ -27,8 +28,21 @@ public class MetadataGenerator : IMetadataGenerator
                 nameof(visionDescription));
         }
 
-        var prompt = PromptLoader.Load(
-            "ShutterstockMetadataPrompt.txt");
+        var promptFileName = platform switch
+        {
+            MetadataPlatform.Shutterstock =>
+                "ShutterstockMetadataPrompt.txt",
+
+            MetadataPlatform.AdobeStock =>
+                "AdobeStockMetadataPrompt.txt",
+
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(platform),
+                platform,
+                "Unsupported metadata platform.")
+        };
+
+        var prompt = PromptLoader.Load(promptFileName);
 
         var fullPrompt = prompt
             .Replace(
@@ -43,6 +57,7 @@ public class MetadataGenerator : IMetadataGenerator
         return await _ollamaClient.GenerateMetadataAsync(
             _modelSettings.MetadataModel,
             fullPrompt,
+            platform,
             cancellationToken);
     }
 }

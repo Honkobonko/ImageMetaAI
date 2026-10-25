@@ -2,6 +2,7 @@
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using ImageMetaAI.Models;
 using ImageMetaAI.Services;
@@ -21,9 +22,18 @@ public partial class MainWindow : Window
     private bool _isProcessing;
     private CancellationTokenSource? _processingCancellationTokenSource;
 
+    private const double DefaultFontSize = 16.0;
+    private const double MinimumFontSize = 10.0;
+    private const double MaximumFontSize = 22.0;
+    private const double FontSizeStep = 1.0;
+
+    private double _currentFontSize = DefaultFontSize;
+
     public MainWindow()
     {
         InitializeComponent();
+
+        SetAppFontSize(DefaultFontSize);
 
         ShutterstockPrimaryCategoryComboBox.ItemsSource =
             ShutterstockCategories.All;
@@ -68,6 +78,76 @@ public partial class MainWindow : Window
         Loaded += MainWindow_Loaded;
     }
 
+    // Font size controls
+
+    private void SetAppFontSize(double fontSize)
+    {
+        _currentFontSize = Math.Clamp(
+            fontSize,
+            MinimumFontSize,
+            MaximumFontSize);
+
+        FontSize = _currentFontSize;
+    }
+
+    private void ChangeAppFontSize(double delta)
+    {
+        SetAppFontSize(_currentFontSize + delta);
+    }
+
+    private void FontSizeIncrease_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        ChangeAppFontSize(FontSizeStep);
+    }
+
+    private void FontSizeDecrease_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        ChangeAppFontSize(-FontSizeStep);
+    }
+
+    private void FontSizeReset_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SetAppFontSize(DefaultFontSize);
+    }
+
+    private void MainWindow_PreviewKeyDown(
+        object sender,
+        System.Windows.Input.KeyEventArgs e)
+    {
+        if ((Keyboard.Modifiers & ModifierKeys.Control) !=
+            ModifierKeys.Control)
+        {
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case Key.Add:
+            case Key.OemPlus:
+                ChangeAppFontSize(FontSizeStep);
+                e.Handled = true;
+                break;
+
+            case Key.Subtract:
+            case Key.OemMinus:
+                ChangeAppFontSize(-FontSizeStep);
+                e.Handled = true;
+                break;
+
+            case Key.D0:
+            case Key.NumPad0:
+                SetAppFontSize(DefaultFontSize);
+                e.Handled = true;
+                break;
+        }
+    }
+
     private async void MainWindow_Loaded(
         object sender,
         RoutedEventArgs e)
@@ -87,7 +167,7 @@ public partial class MainWindow : Window
             OllamaStatusText.Text = "Could not connect to Ollama.";
         }
     }
-    
+
     private void SelectFolder_Click(
         object sender,
         RoutedEventArgs e)
@@ -197,8 +277,8 @@ public partial class MainWindow : Window
     }
 
     private void LocationText_TextChanged(
-    object sender,
-    TextChangedEventArgs e)
+        object sender,
+        TextChangedEventArgs e)
     {
         if (_isUpdatingFields ||
             ImageList.SelectedItem is not ImageFile imageFile)
@@ -309,8 +389,8 @@ public partial class MainWindow : Window
     }
 
     private void AdobeStockCategoryComboBox_SelectionChanged(
-    object sender,
-    SelectionChangedEventArgs e)
+        object sender,
+        SelectionChangedEventArgs e)
     {
         if (_isUpdatingFields ||
             ImageList.SelectedItem is not ImageFile imageFile ||
@@ -322,7 +402,7 @@ public partial class MainWindow : Window
 
         metadata.Category = categoryName;
     }
-    
+
     private void UpdateLocationStatus(ImageFile imageFile)
     {
         if (imageFile.IsLocationManuallyEdited &&
@@ -382,8 +462,8 @@ public partial class MainWindow : Window
         await ProcessImagesAsync(
             images,
             "Please select one or more images first.");
-    }    
-    
+    }
+
     private async Task ProcessImagesAsync(
         IReadOnlyList<ImageFile> images,
         string emptyMessage)
@@ -590,7 +670,7 @@ public partial class MainWindow : Window
         CancelProcessingButton.IsEnabled = false;
         OllamaStatusText.Text = "Cancellation requested...";
     }
-    
+
     private void UpdateMetadataFields(ImageFile imageFile)
     {
         _isUpdatingFields = true;
@@ -667,7 +747,7 @@ public partial class MainWindow : Window
 
             AdobeStockTitleText.Clear();
             AdobeStockKeywordsText.Clear();
-            AdobeStockCategoryComboBox.SelectedItem = null;         
+            AdobeStockCategoryComboBox.SelectedItem = null;
         }
         finally
         {
@@ -690,7 +770,7 @@ public partial class MainWindow : Window
         ImageCountText.Text =
             $"{total} images | {completed} reviewed | {failed} failed";
     }
-    
+
     private async void ExportCsv_Click(
         object sender,
         RoutedEventArgs e)
@@ -831,7 +911,6 @@ public partial class MainWindow : Window
         }
     }
 
-
     private void OpenFolder_Click(
         object sender,
         RoutedEventArgs e)
@@ -868,4 +947,3 @@ public partial class MainWindow : Window
         }
     }
 }
-

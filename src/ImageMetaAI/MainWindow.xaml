@@ -5,7 +5,9 @@
         Height="900"
         Width="1200"
         MinHeight="700"
-        MinWidth="950">
+        MinWidth="950"
+        FontSize="14"
+        PreviewKeyDown="MainWindow_PreviewKeyDown">
 
     <Grid Margin="15">
         <Grid.RowDefinitions>
@@ -21,32 +23,32 @@
         <WrapPanel Grid.Row="0" Margin="0,0,0,12">
             <Button x:Name="SelectFolderButton"
                     Content="Select Folder..."
-                    Width="130" Height="34"
+                    Width="200" Height="34"
                     Margin="0,0,8,0"
                     Click="SelectFolder_Click"/>
 
             <Button x:Name="AnalyzeAllButton"
                     Content="Analyze All"
-                    Width="140" Height="34"
+                    Width="200" Height="34"
                     Margin="0,0,8,0"
                     Click="AnalyzeAll_Click"/>
 
             <Button x:Name="AnalyzeSelectedButton"
                     Content="Analyze Selected"
-                    Width="150" Height="34"
+                    Width="200" Height="34"
                     Margin="0,0,8,0"
                     Click="AnalyzeSelected_Click"/>
 
             <Button x:Name="CancelProcessingButton"
                     Content="Cancel Processing"
-                    Width="150" Height="34"
+                    Width="200" Height="34"
                     Margin="0,0,8,0"
                     IsEnabled="False"
                     Click="CancelProcessing_Click"/>
 
             <Button x:Name="ExportCsvButton"
                     Content="Export CSV"
-                    Width="190" Height="34"
+                    Width="200" Height="34"
                     Margin="0,0,8,0"
                     IsEnabled="False"
                     Click="ExportCsv_Click"/>
@@ -95,7 +97,7 @@
 
                 <Button Grid.Column="2"
                         Content="Open Folder"
-                        Width="110" Height="34"
+                        Width="200" Height="34"
                         Margin="12,0,0,0"
                         VerticalAlignment="Center"
                         Click="OpenFolder_Click"/>

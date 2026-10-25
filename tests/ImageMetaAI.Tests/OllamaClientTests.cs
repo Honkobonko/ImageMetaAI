@@ -613,7 +613,7 @@ public class OllamaClientTests
 
         Assert.Equal(8192, options.GetProperty("num_ctx").GetInt32());
         Assert.Equal(0, options.GetProperty("temperature").GetDouble());
-        Assert.Equal(512, options.GetProperty("num_predict").GetInt32());
+        Assert.Equal(1024, options.GetProperty("num_predict").GetInt32());
     }
 
 

@@ -3,10 +3,11 @@ namespace ImageMetaAI.Models;
 public enum ImageStatus
 {
     Open,
-    Processing,
-    Review,
-    Completed,
-    Skipped,
+    Analyzing,
+    AnalysisCompleted,
+    GeneratingMetadata,
+    MetadataCompleted,
     Error,
-    Cancelled
+    Cancelled,
+    Skipped
 }

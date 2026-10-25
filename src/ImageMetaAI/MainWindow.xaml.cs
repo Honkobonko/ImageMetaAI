@@ -87,7 +87,7 @@ public partial class MainWindow : Window
             OllamaStatusText.Text = "Could not connect to Ollama.";
         }
     }
-
+    
     private void SelectFolder_Click(
         object sender,
         RoutedEventArgs e)
@@ -141,8 +141,16 @@ public partial class MainWindow : Window
         }
 
         UpdateImageCount();
-        ProcessingProgressBar.Value = 0;
-        ProcessingProgressText.Text = string.Empty;
+
+        VisionProgressBar.Value = 0;
+        VisionProgressText.Text = images.Count > 0
+            ? $"0 / {images.Count}"
+            : string.Empty;
+
+        MetadataProgressBar.Value = 0;
+        MetadataProgressText.Text = images.Count > 0
+            ? "Waiting for vision analysis"
+            : string.Empty;
     }
 
     private void ImageList_SelectionChanged(
@@ -374,8 +382,8 @@ public partial class MainWindow : Window
         await ProcessImagesAsync(
             images,
             "Please select one or more images first.");
-    }
-
+    }    
+    
     private async Task ProcessImagesAsync(
         IReadOnlyList<ImageFile> images,
         string emptyMessage)
@@ -407,97 +415,140 @@ public partial class MainWindow : Window
 
         _isProcessing = true;
         _processingCancellationTokenSource = new CancellationTokenSource();
+
         SetProcessingControlsEnabled(false);
 
-        var succeeded = 0;
-        var failed = 0;
         var cancelled = false;
+        var batchFailed = false;
 
-        ProcessingProgressBar.Minimum = 0;
-        ProcessingProgressBar.Maximum = images.Count;
-        ProcessingProgressBar.Value = 0;
+        // Track results only for this processing run.
+        var succeededImages = new HashSet<ImageFile>();
+        var failedImages = new HashSet<ImageFile>();
+
+        var total = images.Count;
+
+        VisionProgressBar.Minimum = 0;
+        VisionProgressBar.Maximum = total;
+        VisionProgressBar.Value = 0;
+        VisionProgressText.Text = $"0 / {total}";
+
+        MetadataProgressBar.Minimum = 0;
+        MetadataProgressBar.Maximum = total;
+        MetadataProgressBar.Value = 0;
+        MetadataProgressText.Text = "Waiting for vision analysis";
 
         try
         {
-            foreach (var imageFile in images)
-            {
-                if (_processingCancellationTokenSource.Token.IsCancellationRequested)
+            await _imageProcessingService.ProcessBatchAsync(
+                images,
+                imageUpdated: updatedImage =>
                 {
-                    cancelled = true;
-                    break;
-                }
+                    if (updatedImage.Status == ImageStatus.Error)
+                    {
+                        failedImages.Add(updatedImage);
+                        succeededImages.Remove(updatedImage);
+                    }
+                    else if (updatedImage.Status == ImageStatus.MetadataCompleted)
+                    {
+                        succeededImages.Add(updatedImage);
+                        failedImages.Remove(updatedImage);
+                    }
 
-                OllamaStatusText.Text =
-                    $"Processing {succeeded + failed + 1} of {images.Count}: " +
-                    imageFile.FileName;
+                    if (ReferenceEquals(
+                        ImageList.SelectedItem,
+                        updatedImage))
+                    {
+                        UpdateMetadataFields(updatedImage);
+                    }
 
-                try
+                    ImageList.Items.Refresh();
+                    UpdateImageCount();
+                },
+                progressCallback: (phase, completed, phaseTotal, message) =>
                 {
-                    await _imageProcessingService.ProcessAsync(
-                        imageFile,
-                        updatedImage =>
-                        {
-                            if (ReferenceEquals(
-                                ImageList.SelectedItem,
-                                updatedImage))
-                            {
-                                UpdateMetadataFields(updatedImage);
-                            }
+                    OllamaStatusText.Text = message;
 
-                            ImageList.Items.Refresh();
-                        },
-                        cancellationToken: _processingCancellationTokenSource.Token,
-                        recognizeLocations:
-                            RecognizeLocationsCheckBox.IsChecked == true,
-                        platforms: selectedPlatforms);
+                    if (phase == ProcessingPhase.Vision)
+                    {
+                        VisionProgressBar.Maximum = phaseTotal;
+                        VisionProgressBar.Value = completed;
+                        VisionProgressText.Text =
+                            $"{completed} / {phaseTotal}";
+                    }
+                    else if (phase == ProcessingPhase.Metadata)
+                    {
+                        MetadataProgressBar.Maximum = phaseTotal;
+                        MetadataProgressBar.Value = completed;
+                        MetadataProgressText.Text =
+                            $"{completed} / {phaseTotal}";
+                    }
+                },
+                cancellationToken: _processingCancellationTokenSource.Token,
+                recognizeLocations:
+                    RecognizeLocationsCheckBox.IsChecked == true,
+                platforms: selectedPlatforms);
+        }
+        catch (OperationCanceledException)
+        {
+            cancelled = true;
+        }
+        catch (Exception ex)
+        {
+            batchFailed = true;
 
-                    succeeded++;
-                }
-                catch (OperationCanceledException)
-                {
-                    cancelled = true;
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    failed++;
-
-                    System.Diagnostics.Debug.WriteLine(
-                        $"Failed to process {imageFile.FileName}: {ex}");
-                }
-
-                ProcessingProgressBar.Value = succeeded + failed;
-                ProcessingProgressText.Text =
-                    $"{succeeded + failed} / {images.Count}";
-
-                ImageList.Items.Refresh();
-                UpdateImageCount();
-            }
+            System.Diagnostics.Debug.WriteLine(
+                $"Batch processing failed: {ex}");
         }
         finally
         {
+            // Refresh final counts from the images processed in this run.
+            foreach (var image in images)
+            {
+                if (image.Status == ImageStatus.MetadataCompleted)
+                {
+                    succeededImages.Add(image);
+                    failedImages.Remove(image);
+                }
+                else if (image.Status == ImageStatus.Error)
+                {
+                    failedImages.Add(image);
+                    succeededImages.Remove(image);
+                }
+            }
+
             _processingCancellationTokenSource.Dispose();
             _processingCancellationTokenSource = null;
 
             _isProcessing = false;
             SetProcessingControlsEnabled(true);
+
+            ImageList.Items.Refresh();
+            UpdateImageCount();
         }
+
+        var succeeded = succeededImages.Count;
+        var failed = failedImages.Count;
 
         if (cancelled)
         {
             OllamaStatusText.Text =
                 $"Processing cancelled. Successful: {succeeded}, Failed: {failed}.";
 
-            ProcessingProgressText.Text =
-                $"Stopped after {succeeded + failed} of {images.Count} images.";
+            MetadataProgressText.Text =
+                $"Cancelled at {MetadataProgressBar.Value:0} / {total}";
+        }
+        else if (batchFailed)
+        {
+            OllamaStatusText.Text =
+                $"Batch processing failed. Successful: {succeeded}, Failed: {failed}.";
         }
         else
         {
             OllamaStatusText.Text =
                 $"Processing finished. Successful: {succeeded}, Failed: {failed}.";
 
-            ProcessingProgressText.Text =
-                $"Completed {images.Count} images.";
+            VisionProgressText.Text = $"{total} / {total}";
+            MetadataProgressText.Text = $"{total} / {total}";
         }
     }
 
@@ -539,7 +590,7 @@ public partial class MainWindow : Window
         CancelProcessingButton.IsEnabled = false;
         OllamaStatusText.Text = "Cancellation requested...";
     }
-
+    
     private void UpdateMetadataFields(ImageFile imageFile)
     {
         _isUpdatingFields = true;
@@ -582,19 +633,14 @@ public partial class MainWindow : Window
                 ? string.Empty
                 : string.Join(", ", adobeStock.Keywords);
 
-            var adobeCategory = AdobeStockCategories.All
-                .Where(category =>
-                    category.Id.ToString() == adobeStock?.Category)
-                .Select(category => category.Name)
-                .FirstOrDefault();
-
-            var categoryName = imageFile.AdobeStockMetadata?.Category;
+            var categoryName = adobeStock?.Category;
 
             AdobeStockCategoryComboBox.SelectedItem =
-                AdobeStockCategories.All.Any(item => item.Name == categoryName)
+                AdobeStockCategories.All.Any(
+                    category => category.Name == categoryName)
                     ? categoryName
                     : null;
-                    }
+        }
         finally
         {
             _isUpdatingFields = false;
@@ -635,7 +681,7 @@ public partial class MainWindow : Window
 
         var completed = ImageList.Items
             .Cast<ImageFile>()
-            .Count(image => image.Status == ImageStatus.Review);
+            .Count(image => image.Status == ImageStatus.MetadataCompleted);
 
         var failed = ImageList.Items
             .Cast<ImageFile>()
@@ -778,7 +824,7 @@ public partial class MainWindow : Window
         }
         finally
         {
-            ExportCsvButton.Content = "Export";
+            ExportCsvButton.Content = "Export CSV";
             ExportCsvButton.IsEnabled =
                 Directory.Exists(FolderPathText.Text) &&
                 !_isProcessing;
@@ -822,3 +868,4 @@ public partial class MainWindow : Window
         }
     }
 }
+

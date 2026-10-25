@@ -17,6 +17,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
+        <!-- Main actions -->
         <WrapPanel Grid.Row="0" Margin="0,0,0,12">
             <Button x:Name="SelectFolderButton"
                     Content="Select Folder..."
@@ -51,6 +52,7 @@
                     Click="ExportCsv_Click"/>
         </WrapPanel>
 
+        <!-- Selected folder -->
         <Border Grid.Row="1"
                 Background="#F5F6F7"
                 BorderBrush="#D5D9DE"
@@ -58,6 +60,7 @@
                 CornerRadius="6"
                 Padding="12"
                 Margin="0,0,0,10">
+
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -68,7 +71,8 @@
                 <Border Grid.Column="0"
                         Background="#E7E9EC"
                         CornerRadius="5"
-                        Width="44" Height="44"
+                        Width="44"
+                        Height="44"
                         Margin="0,0,12,0">
                     <TextBlock Text="📁"
                                FontSize="23"
@@ -78,25 +82,15 @@
 
                 <StackPanel Grid.Column="1"
                             VerticalAlignment="Center">
-                    <TextBlock Text="SELECTED IMAGE FOLDER"
-                               FontSize="11"
-                               FontWeight="Bold"
-                               Foreground="#526579"
-                               Margin="0,0,0,4"/>
-
                     <TextBlock x:Name="FolderPathText"
                                Text="No folder selected"
-                               FontSize="15"
-                               FontWeight="SemiBold"
-                               Foreground="#1D2939"
-                               TextTrimming="CharacterEllipsis"
-                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                               TextWrapping="Wrap"/>
 
                     <TextBlock x:Name="ImageCountText"
-                               Text="No images loaded"
+                               Text="0 images"
                                FontSize="12"
-                               Foreground="#526579"
-                               Margin="0,4,0,0"/>
+                               Foreground="Gray"
+                               Margin="0,3,0,0"/>
                 </StackPanel>
 
                 <Button Grid.Column="2"
@@ -108,24 +102,50 @@
             </Grid>
         </Border>
 
+        <!-- Two-phase processing progress -->
         <StackPanel Grid.Row="2" Margin="0,0,0,10">
             <TextBlock x:Name="OllamaStatusText"
                        Text="Checking Ollama..."
                        FontWeight="SemiBold"
-                       Margin="0,0,0,5"/>
+                       Margin="0,0,0,10"
+                       TextWrapping="Wrap"/>
 
-            <ProgressBar x:Name="ProcessingProgressBar"
+            <TextBlock Text="PHASE 1 · VISION ANALYSIS"
+                       FontSize="11"
+                       FontWeight="Bold"
+                       Foreground="#526579"
+                       Margin="0,0,0,4"/>
+
+            <ProgressBar x:Name="VisionProgressBar"
                          Height="12"
                          Minimum="0"
                          Maximum="100"
                          Value="0"/>
 
-            <TextBlock x:Name="ProcessingProgressText"
-                       Text=""
+            <TextBlock x:Name="VisionProgressText"
+                       Text="Waiting for processing"
+                       FontSize="12"
+                       Margin="0,3,0,10"/>
+
+            <TextBlock Text="PHASE 2 · METADATA GENERATION"
+                       FontSize="11"
+                       FontWeight="Bold"
+                       Foreground="#526579"
+                       Margin="0,0,0,4"/>
+
+            <ProgressBar x:Name="MetadataProgressBar"
+                         Height="12"
+                         Minimum="0"
+                         Maximum="100"
+                         Value="0"/>
+
+            <TextBlock x:Name="MetadataProgressText"
+                       Text="Waiting for vision analysis"
                        FontSize="12"
                        Margin="0,3,0,0"/>
         </StackPanel>
 
+        <!-- Location recognition -->
         <StackPanel Grid.Row="3"
                     Orientation="Horizontal"
                     Margin="0,0,0,8">
@@ -136,6 +156,7 @@
                       ToolTip="When enabled, GPS coordinates are used to look up a location online. The location can also be used as context for metadata generation."/>
         </StackPanel>
 
+        <!-- Metadata platforms -->
         <Border Grid.Row="4"
                 BorderBrush="#D5D9DE"
                 BorderThickness="1"
@@ -167,6 +188,7 @@
             </StackPanel>
         </Border>
 
+        <!-- Image list and editor -->
         <Grid Grid.Row="5">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="300"/>
@@ -199,11 +221,13 @@
                                            ToolTip="GPS coordinates available">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Setter Property="Visibility"
+                                                    Value="Collapsed"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding HasGpsCoordinates}"
                                                              Value="True">
-                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Setter Property="Visibility"
+                                                            Value="Visible"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -239,6 +263,7 @@
                                        Foreground="Gray"
                                        FontSize="12"
                                        Margin="0,0,0,6"/>
+
                             <TextBox x:Name="VisionDescriptionText"
                                      IsReadOnly="True"
                                      TextWrapping="Wrap"
@@ -314,6 +339,7 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
+                        <!-- Shutterstock -->
                         <GroupBox Grid.Column="0"
                                   Header="Shutterstock"
                                   Margin="0,0,6,0">
@@ -384,6 +410,7 @@
                             </StackPanel>
                         </GroupBox>
 
+                        <!-- Adobe Stock -->
                         <GroupBox Grid.Column="1"
                                   Header="Adobe Stock"
                                   Margin="6,0,0,0">

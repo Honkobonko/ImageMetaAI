@@ -1,16 +1,34 @@
+using System.ComponentModel;
 using System.IO;
+using System.Runtime.CompilerServices;
 
 namespace ImageMetaAI.Models;
 
-public class ImageFile
+public class ImageFile : INotifyPropertyChanged
 {
+    public event PropertyChangedEventHandler? PropertyChanged;
+
     public string FilePath { get; }
 
     public string FileName => Path.GetFileName(FilePath);
 
     public string Extension => Path.GetExtension(FilePath);
 
-    public ImageStatus Status { get; set; } = ImageStatus.Open;
+    private ImageStatus _status = ImageStatus.Open;
+
+    public ImageStatus Status
+    {
+        get => _status;
+        set
+        {
+            if (_status == value)
+                return;
+
+            _status = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(DisplayStatus));
+        }
+    }
 
     public string? VisionDescription { get; set; }
 
@@ -30,48 +48,61 @@ public class ImageFile
 
     public string? ResolvedLocation { get; set; }
 
-    public LocationLookupStatus LocationStatus { get; set; } =
+    private LocationLookupStatus _locationStatus =
         LocationLookupStatus.NotAttempted;
+
+    public LocationLookupStatus LocationStatus
+    {
+        get => _locationStatus;
+        set
+        {
+            if (_locationStatus == value)
+                return;
+
+            _locationStatus = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(DisplayStatus));
+        }
+    }
 
     public bool IsLocationManuallyEdited { get; set; }
 
-    public string DisplayStatus
+    public string DisplayStatus => Status switch
     {
-        get
+        ImageStatus.Open => "Ready",
+        ImageStatus.Analyzing => "Analyzing...",
+        ImageStatus.AnalysisCompleted => "Analysis completed",
+        ImageStatus.GeneratingMetadata => "Generating metadata...",
+        ImageStatus.MetadataCompleted => GetMetadataCompletedStatus(),
+        ImageStatus.Error => "Error",
+        ImageStatus.Cancelled => "Cancelled",
+        ImageStatus.Skipped => "Skipped",
+        _ => Status.ToString()
+    };
+
+    private string GetMetadataCompletedStatus()
+    {
+        return LocationStatus switch
         {
-            if (Status == ImageStatus.Error)
-                return "Error";
+            LocationLookupStatus.NoGpsData =>
+                "Metadata completed (no GPS data)",
 
-            if (Status == ImageStatus.Processing)
-                return "Analyzing...";
+            LocationLookupStatus.NotFound =>
+                "Metadata completed (no location found)",
 
-            if (Status == ImageStatus.Cancelled)
-                return "Cancelled";
+            LocationLookupStatus.Failed =>
+                "Metadata completed (location lookup failed)",
 
-            if (Status == ImageStatus.Open)
-                return "Ready";
+            _ => "Metadata completed"
+        };
+    }
 
-            if (Status == ImageStatus.Skipped)
-                return "Skipped";
-
-            if (Status != ImageStatus.Review &&
-                Status != ImageStatus.Completed)
-                return Status.ToString();
-
-            return LocationStatus switch
-            {
-                LocationLookupStatus.NoGpsData =>
-                    "Completed (no GPS data)",
-
-                LocationLookupStatus.NotFound =>
-                    "Completed (no location found)",
-
-                LocationLookupStatus.Failed =>
-                    "Completed (location lookup failed)",
-
-                _ => "Completed"
-            };
-        }
+    private void OnPropertyChanged(
+        [CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(
+            this,
+            new PropertyChangedEventArgs(propertyName));
     }
 
     public ImageFile(string filePath)

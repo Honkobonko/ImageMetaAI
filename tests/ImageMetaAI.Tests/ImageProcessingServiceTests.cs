@@ -1,4 +1,4 @@
-using ImageMetaAI.Models;
+﻿using ImageMetaAI.Models;
 using ImageMetaAI.Services;
 
 namespace ImageMetaAI.Tests;
@@ -20,7 +20,7 @@ public class ImageProcessingServiceTests
         await service.ProcessAsync(imageFile);
 
         Assert.Equal(
-            ImageStatus.Review,
+            ImageStatus.MetadataCompleted,
             imageFile.Status);
     }
 
@@ -111,10 +111,12 @@ public class ImageProcessingServiceTests
 
         Assert.Equal(
             [
-                ImageStatus.Processing,
-                ImageStatus.Processing,
-                ImageStatus.Processing,
-                ImageStatus.Review
+                  ImageStatus.Analyzing,
+                ImageStatus.Analyzing,
+                ImageStatus.AnalysisCompleted,
+                ImageStatus.GeneratingMetadata,
+                ImageStatus.GeneratingMetadata,
+                ImageStatus.MetadataCompleted
             ],
             statuses);
     }
@@ -306,3 +308,4 @@ public class ImageProcessingServiceTests
         }
     }
 }
+

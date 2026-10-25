@@ -10,4 +10,12 @@ public interface IImageProcessingService
         CancellationToken cancellationToken = default,
         bool recognizeLocations = false,
         IReadOnlyCollection<MetadataPlatform>? platforms = null);
+
+    Task ProcessBatchAsync(
+        IReadOnlyList<ImageFile> images,
+        Action<ImageFile>? imageUpdated = null,
+        Action<ProcessingPhase, int, int, string>? progressCallback = null,
+        CancellationToken cancellationToken = default,
+        bool recognizeLocations = false,
+        IReadOnlyCollection<MetadataPlatform>? platforms = null);
 }

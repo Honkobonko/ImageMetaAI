@@ -59,16 +59,39 @@ Each platform uses its own metadata prompt and CSV exporter.
 
 ## Installation and Setup
 
-Install the .NET 9 SDK and Ollama.
+Install the .NET 9 SDK and [Ollama](https://ollama.com/).
 
-The vision and metadata models are configured in `OllamaModelSettings.cs`. Update VisionModel and MetadataModel to the desired Ollama model names, then make sure those models are installed locally. 
-Note: Switching between different models during processing may take some time, as Ollama may need to load the selected model into memory before processing can continue.
+### AI Models
 
-For example, if the configured model is `qwen2.5vl:7b`:
+ImageMetaAI is currently configured to use the following Ollama models:
+
+- **Vision model:** `qwen2.5vl:7b` — analyzes images and generates textual descriptions.
+- **Metadata model:** `qwen3:14b` — generates titles, keywords, and categories for the selected stock photography platforms.
+
+The metadata model is configured to run with thinking disabled to improve the reliability of structured JSON output.
+
+Pull the required models locally:
 
 ```powershell
 ollama pull qwen2.5vl:7b
+ollama pull qwen3:14b
 ```
+
+### Changing Models
+
+You can potentially use other models supported by Ollama. The vision and metadata models are configured in `OllamaModelSettings.cs`. Update `VisionModel` and `MetadataModel` to the desired Ollama model names and make sure the models are installed locally.
+
+Model compatibility depends on the task:
+
+- **Vision models** must support image input.
+- **Metadata models** must reliably generate the structured JSON expected by ImageMetaAI.
+- Different models may produce different results in terms of accuracy, keywords, categories, and output formatting.
+
+The current configuration has been set up for the models listed above. Other models may require adjustments to prompts or generation settings.
+
+Switching between different models during processing may take some time, as Ollama may need to load the selected model into memory before processing can continue.
+
+### Run the Application
 
 Ensure Ollama is running and available at:
 
@@ -86,20 +109,6 @@ Run the application:
 
 ```powershell
 dotnet run --project src/ImageMetaAI/ImageMetaAI.csproj
-```
-
-## Development
-
-Run the automated tests:
-
-```powershell
-dotnet test
-```
-
-Build the application:
-
-```powershell
-dotnet build
 ```
 
 ## Privacy

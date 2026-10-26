@@ -34,7 +34,7 @@ appsettings.Local.json
 appsettings.Development.json
 *.local.json
 
-# ImageMetaAI - local data
+# StockTaggerLocalAI - local data
 data/
 photos/
 

@@ -1,8 +1,8 @@
-# ImageMetaAI
+# StockTaggerLocalAI
 
 Local AI-powered image analysis and metadata generation for Shutterstock and Adobe Stock.
 
-![ImageMetaAI main window](docs/images/ImageMetaAI.png)
+![StockTaggerLocalAI main window](docs/images/StockTaggerLocalAI.png)
 
 ## Table of Contents
 
@@ -16,19 +16,19 @@ Local AI-powered image analysis and metadata generation for Shutterstock and Ado
 
 ## Overview
 
-ImageMetaAI is a Windows desktop application that uses locally running AI models to analyze images and generate stock photography metadata.
+StockTaggerLocalAI is a Windows desktop application that uses locally running AI models to analyze images and generate stock photography metadata.
 
 Built with C# and WPF, the application supports separate metadata workflows for Shutterstock and Adobe Stock. Generated titles, keywords, and categories can be reviewed and edited before being exported to platform-specific CSV files.
 
 ## How It Works
 
-ImageMetaAI processes images in two phases.
+StockTaggerLocalAI processes images in two phases.
 
 ### Phase 1: Vision Analysis
 
 A local vision model analyzes each image and generates a textual description. GPS coordinates are read from the image's EXIF metadata, if available.
 
-Optionally, ImageMetaAI can use OpenStreetMap Nominatim to resolve GPS coordinates to a location name. Location information and additional user-provided context can help inform metadata generation.
+Optionally, StockTaggerLocalAI can use OpenStreetMap Nominatim to resolve GPS coordinates to a location name. Location information and additional user-provided context can help inform metadata generation.
 
 ### Phase 2: Metadata Generation
 
@@ -36,7 +36,7 @@ A metadata model uses the image description and optional additional information 
 
 The generated titles, keywords, and categories can be reviewed and edited in the application before export.
 
-ImageMetaAI provides separate CSV exporters for Shutterstock and Adobe Stock. Either platform can be selected independently, and both can be exported in the same operation.
+StockTaggerLocalAI provides separate CSV exporters for Shutterstock and Adobe Stock. Either platform can be selected independently, and both can be exported in the same operation.
 
 ## Metadata Platforms
 
@@ -63,7 +63,7 @@ Install the .NET 9 SDK and [Ollama](https://ollama.com/).
 
 ### AI Models
 
-ImageMetaAI is currently configured to use the following Ollama models:
+StockTaggerLocalAI is currently configured to use the following Ollama models:
 
 - **Vision model:** `qwen2.5vl:7b` — analyzes images and generates textual descriptions.
 - **Metadata model:** `qwen3:14b` — generates titles, keywords, and categories for the selected stock photography platforms.
@@ -84,7 +84,7 @@ You can potentially use other models supported by Ollama. The vision and metadat
 Model compatibility depends on the task:
 
 - **Vision models** must support image input.
-- **Metadata models** must reliably generate the structured JSON expected by ImageMetaAI.
+- **Metadata models** must reliably generate the structured JSON expected by StockTaggerLocalAI.
 - Different models may produce different results in terms of accuracy, keywords, categories, and output formatting.
 
 The current configuration has been set up for the models listed above. Other models may require adjustments to prompts or generation settings.
@@ -108,7 +108,7 @@ dotnet build
 Run the application:
 
 ```powershell
-dotnet run --project src/ImageMetaAI/ImageMetaAI.csproj
+dotnet run --project src/StockTaggerLocalAI/StockTaggerLocalAI.csproj
 ```
 
 ## Privacy
@@ -118,4 +118,4 @@ dotnet run --project src/ImageMetaAI/ImageMetaAI.csproj
 - GPS metadata is read locally from image EXIF data.
 - If location recognition is enabled, GPS coordinates may be sent to OpenStreetMap Nominatim for reverse geocoding.
 - Location recognition requires an internet connection.
-- ImageMetaAI generates metadata files but does not automatically upload images or metadata to stock photography platforms.
+- StockTaggerLocalAI generates metadata files but does not automatically upload images or metadata to stock photography platforms.
